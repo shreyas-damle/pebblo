@@ -53,9 +53,9 @@ class DocHelper:
                 data_source_findings[label_name]["snippetCount"] += 1
                 data_source_findings[label_name]["findings"] += value
                 data_source_findings[label_name]["snippets"].append(snippet.dict())
-                # unique_source_paths = set(snippet["sourcePath"]
-                #                           for snippet in data_source_findings[label_name]["snippets"])
-                # data_source_findings[label_name]["fileCount"] = file_count
+                unique_source_paths = set(snippet["sourcePath"]
+                                          for snippet in data_source_findings[label_name]["snippets"])
+                data_source_findings[label_name]["fileCount"] = len(unique_source_paths)
             else:
                 dict_obj = {f"labelName": label_name, "findings": value, "findingsType": entity_type, "snippetCount": 1,
                             "fileCount": file_count}
