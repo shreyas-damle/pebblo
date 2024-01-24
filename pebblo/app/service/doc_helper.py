@@ -60,10 +60,14 @@ class DocHelper:
             else:
                 dict_obj = {f"labelName": label_name, "findings": value, "findingsType": entity_type, "snippetCount": 1,
                             "fileCount": file_count}
-                raw_data["snippet_counter"] += 1
-                raw_data["total_snippet_counter"] += 1
                 data_source_findings[label_name] = dict_obj
-                data_source_findings[label_name]["snippets"] = [snippet.dict()]
+                raw_data["total_snippet_counter"] += 1
+                if raw_data["snippet_counter"] < ReportConstants.snippets_limit.value:
+                    data_source_findings[label_name]["snippets"] = [snippet.dict()]
+                    raw_data["snippet_counter"] += 1
+                else:
+                    data_source_findings[label_name]["snippets"] = []
+
                 data_source_findings[label_name]["unique_snippets"] = set()
                 data_source_findings[label_name]["unique_snippets"].add(source_path)
 
