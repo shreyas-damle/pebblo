@@ -105,6 +105,8 @@ class DataSource(BaseModel):
     sourcePath: str
     sourceType: str
     sourceSize: int
+    totalSnippetCount: int
+    displayedSnippetCount: int
     findingsSummary: list
     findingsDetails: Optional[list]
     # snippets: Optional[List[Snippets]]

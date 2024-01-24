@@ -7,6 +7,7 @@ from pebblo.app.libs.logger import logger
 from pebblo.app.models.models import Metadata, AiDataModel, AiDocs, ReportModel, Snippets, Summary, DataSource
 from pebblo.entity_classifier.entity_classifier import EntityClassifier
 from pebblo.topic_classifier.topic_classifier import TopicClassifier
+from pebblo.app.enums.enums import ReportConstants
 
 # Init topic classifier
 topic_classifier_obj = TopicClassifier()
@@ -30,7 +31,6 @@ class DocHelper:
                 topics, topic_count = topic_classifier_obj.predict(doc_info.data)
                 entities, entity_count = entity_classifier_obj.presidio_entity_classifier(doc_info.data)
                 secrets, secret_count = entity_classifier_obj.presidio_secret_classifier(doc_info.data)
-                # secrets, secret_count = {}, 0
                 entities.update(secrets)
                 entity_count += secret_count
                 doc_info.topics = topics
@@ -42,7 +42,7 @@ class DocHelper:
             logger.error(f"Get Classifier Response Failed, Exception: {e}")
             return doc_info
 
-    def _get_finding_details(self, doc, data_source_findings, entity_type, file_count):
+    def _get_finding_details(self, doc, data_source_findings, entity_type, file_count, report_metadata_init):
         source_path = doc.get("sourcePath")
         snippet = Snippets(snippet=doc["doc"],
                            sourcePath=source_path,
@@ -52,15 +52,21 @@ class DocHelper:
             if label_name in data_source_findings.keys():
                 data_source_findings[label_name]["snippetCount"] += 1
                 data_source_findings[label_name]["findings"] += value
-                data_source_findings[label_name]["snippets"].append(snippet.dict())
-                unique_source_paths = set(snippet["sourcePath"]
-                                          for snippet in data_source_findings[label_name]["snippets"])
-                data_source_findings[label_name]["fileCount"] = len(unique_source_paths)
+                data_source_findings[label_name]["unique_snippets"].add(source_path)
+                report_metadata_init["total_snippet_counter"] += 1
+                if report_metadata_init["snippet_counter"] < ReportConstants.snippets_limit.value:
+                    data_source_findings[label_name]["snippets"].append(snippet.dict())
+                    report_metadata_init["snippet_counter"] += 1
+                data_source_findings[label_name]["fileCount"] = len(data_source_findings[label_name]["unique_snippets"])
             else:
                 dict_obj = {f"labelName": label_name, "findings": value, "findingsType": entity_type, "snippetCount": 1,
                             "fileCount": file_count}
+                report_metadata_init["snippet_counter"] += 1
+                report_metadata_init["total_snippet_counter"] += 1
                 data_source_findings[label_name] = dict_obj
                 data_source_findings[label_name]["snippets"] = [snippet.dict()]
+                data_source_findings[label_name]["unique_snippets"] = set()
+                data_source_findings[label_name]["unique_snippets"].add(source_path)
 
     def _get_doc_report_metadata(self, doc, report_metadata_init):
         logger.debug("In Function: _get_doc_report_metadata")
@@ -70,7 +76,6 @@ class DocHelper:
         findings_topics = report_metadata_init["findings_topics"]
         snippet_count = report_metadata_init["snippet_count"]
         file_count = report_metadata_init["file_count"]
-        data_source_snippets = report_metadata_init["data_source_snippets"]
         data_source_findings = report_metadata_init["data_source_findings"]
 
         # getting snippet details only if snippet has restricted entities or topics.
@@ -95,14 +100,13 @@ class DocHelper:
             findings_topics += doc["topicCount"]
             snippet_count += 1
             file_count += 1
-            if source_path in self.loader_mapper.keys():
-                loader_source_snippets[source_path]["fileOwner"] = self.loader_mapper[source_path]["fileOwner"]
-                loader_source_snippets[source_path]["sourceSize"] = self.loader_mapper[source_path]["sourceSize"]
+            loader_source_snippets[source_path]["fileOwner"] = doc["fileOwner"]
+            loader_source_snippets[source_path]["sourceSize"] = doc['sourceSize']
 
         if len(doc["topics"]) > 0:
-            self._get_finding_details(doc, data_source_findings, "topics", file_count)
+            self._get_finding_details(doc, data_source_findings, "topics", file_count, report_metadata_init)
         if len(doc["entities"]) > 0:
-            self._get_finding_details(doc, data_source_findings, "entities", file_count)
+            self._get_finding_details(doc, data_source_findings, "entities", file_count, report_metadata_init)
 
         report_metadata_init["loader_source_snippets"] = loader_source_snippets
         report_metadata_init["total_findings"] = total_findings
@@ -110,7 +114,6 @@ class DocHelper:
         report_metadata_init["findings_topics"] = findings_topics
         report_metadata_init["snippet_count"] = snippet_count
         report_metadata_init["file_count"] = file_count
-        report_metadata_init["data_source_snippets"] = data_source_snippets
         report_metadata_init["data_source_findings"] = data_source_findings
         return report_metadata_init
 
@@ -121,7 +124,9 @@ class DocHelper:
             source_path = loader.get("sourcePath")
             source_type = loader.get("sourceType")
             source_size = loader.get("sourceSize")
-            data_source_findings = [{key: value[key] for key in value if key != value[key]} for value in
+            total_snippet_count = report_metadata_init["total_snippet_counter"]
+            displayed_snippet_count = report_metadata_init["snippet_counter"]
+            data_source_findings = [{key: value[key] for key in value if key != value[key] and key != "unique_snippets"} for value in
                                     report_metadata_init["data_source_findings"].values()]
             data_source_findings_summary = []
             for ds_findings in data_source_findings:
@@ -142,9 +147,11 @@ class DocHelper:
                                          sourcePath=source_path,
                                          sourceType=source_type,
                                          sourceSize=source_size,
+                                         totalSnippetCount = total_snippet_count,
+                                         displayedSnippetCount = displayed_snippet_count,
                                          findingsSummary=data_source_findings_summary,
-                                         findingsDetails=data_source_findings,
-                                         snippets=report_metadata_init["data_source_snippets"])
+                                         findingsDetails=data_source_findings
+                                         )
             data_source_obj_list.append(data_source_obj)
         return data_source_obj_list
 
@@ -168,8 +175,7 @@ class DocHelper:
         )
 
         # Get top N findings, currently 5
-        top_n_findings = sorted(loader_source_snippets.items(), key=lambda x: x[1]['findings'], reverse=True)[:5]
-
+        top_n_findings = sorted(loader_source_snippets.items(), key=lambda x: x[1]['findings'], reverse=True)[:ReportConstants.top_findings_limit.value]
         top_n_finding_objects = [
             {
                 "fileName": key,
@@ -199,7 +205,7 @@ class DocHelper:
     def process_docs_and_generate_report(self):
         loader_details = self.data.get("loader_details", {})
         # should be list of loader obj
-        self.loader_mapper[loader_details.get("source_path")] = {"fileOwner": self.data.get("file_owner"),
+        self.loader_mapper[loader_details.get("source_path")] = {"fileOwner": self.data.get("source_owner"),
                                                                  "sourceSize": loader_details.get("source_size"),
                                                                  "type": loader_details.get("source_type")}
         input_doc_list = self.data.get('docs', [])
@@ -210,7 +216,8 @@ class DocHelper:
         report_metadata_init = {"total_findings": 0, "findings_entities": 0, "findings_topics": 0,
                                 "data_source_count": 1,
                                 "data_source_snippets": list(), "loader_source_snippets": {}, "file_count": 0,
-                                "snippet_count": 0, "data_source_findings": {}}
+                                "snippet_count": 0, "data_source_findings": {}, "snippet_counter": 0,
+                                "total_snippet_counter": 0}
         loader_source_files = self.app_details.get("loader_source_files", [])
         for doc in input_doc_list:
             # Get classifier Response
