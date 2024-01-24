@@ -46,8 +46,7 @@ class DocHelper:
         source_path = doc.get("sourcePath")
         snippet = Snippets(snippet=doc["doc"],
                            sourcePath=source_path,
-                           fileOwner=doc.get("fileOwner", " "),
-                           sourceSize=doc.get("sourceSize", 0))
+                           fileOwner=doc.get("fileOwner", " "))
         for label_name, value in doc[entity_type].items():
             if label_name in data_source_findings.keys():
                 data_source_findings[label_name]["snippetCount"] += 1

@@ -97,7 +97,6 @@ class Snippets(BaseModel):
     snippet: str
     sourcePath: str
     fileOwner: str
-    sourceSize: int
 
 
 class DataSource(BaseModel):
