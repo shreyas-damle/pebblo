@@ -29,7 +29,6 @@ class AiDataModel(BaseModel):
 
 
 class AiDocs(BaseModel):
-    metadata: Metadata
     doc: str
     sourceSize: int
     fileOwner: str
