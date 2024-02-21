@@ -79,7 +79,7 @@ class LoaderHelper:
         last_used = datetime.now()
         doc_model = AiDocs(appId=self.load_id,
                            doc=doc.get('doc'),
-                           sourceSize=doc.get('source_path_size', 0),
+                           sourceSize=doc.get('source_path_size', 0) if doc.get("source_path_size") is not None else 0,
                            fileOwner=doc.get('file_owner', '-'),
                            sourcePath=doc.get('source_path'),
                            loaderSourcePath=loader_details.get("source_path"),
