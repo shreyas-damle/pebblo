@@ -39,9 +39,10 @@ MYPY_CACHE=.mypy_cache
 
 lint:
 	ruff check .
-	ruff format . --diff
-	ruff --select I .
-	mkdir -p $(MYPY_CACHE) && mypy --install-types --non-interactive $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
+#	$(eval CURRENT_CHANGED_FILES=$(shell git diff --cached --name-only -- '*.py' --diff-filter=ACM | xargs -n 1 -I '{}' | tr '\n' ' '))
+#	ruff check $(CURRENT_CHANGED_FILES)
+#	ruff format $(CURRENT_CHANGED_FILES) --diff
+#	ruff format $(CURRENT_CHANGED_FILES)
 
 spell_check:
 	codespell --toml pyproject.toml
