@@ -1,20 +1,23 @@
-# See https://pre-commit.com for more information
-# See https://pre-commit.com/hooks.html for more hooks
+## See https://pre-commit.com for more information
+## See https://pre-commit.com/hooks.html for more hooks
 repos:
-    - repo: local
-      hooks:
-          - id: pylint
-            name: pylint
-            entry: pylint --rcfile=.pylintrc
-            language: python
-            types: [ python ]
-            require_serial: true
-          - id: lint
-            name: lint
-            entry: make lint
-            language: system
-            types: [ python ]
-            require_serial: true
+#    - repo: local
+#      hooks:
+#          - id: pylint
+#            name: pylint
+#            entry: pylint
+#            language: python
+#            types: [ python ]
+#            require_serial: true
+#          - id: lint
+#            name: lint
+#            entry: make lint
+#            args: ["git", "diff", "--name-only", "HEAD"]
+#            language: python
+#            types: [ python ]
+#            require_serial: true
+#            pass_filenames: true
+
 
     -   repo: https://github.com/pre-commit/pre-commit-hooks
         rev: v3.2.0
@@ -22,10 +25,18 @@ repos:
         -   id: trailing-whitespace
         -   id: end-of-file-fixer
         -   id: check-yaml
+        -   id: check-json
         -   id: check-added-large-files
+        -   id: detect-private-key
+        -   id: name-tests-test
+        -   id: requirements-txt-fixer
 
     - repo: https://github.com/astral-sh/ruff-pre-commit
       rev: v0.2.2
       hooks:
         - id: ruff
-        - id: ruff-format
+
+    - repo: https://github.com/hhatto/autopep8
+      rev: v2.0.4
+      hooks:
+        - id: autopep8

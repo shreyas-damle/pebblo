@@ -3,15 +3,10 @@ from presidio_analyzer.context_aware_enhancers import LemmaContextAwareEnhancer
 from presidio_anonymizer import AnonymizerEngine
 
 from pebblo.entity_classifier.libs.logger import logger
-from pebblo.entity_classifier.utils.config import (
-    ConfidenceScore,
-    Entities,
-    SecretEntities,
-)
+from pebblo.entity_classifier.utils.config import (ConfidenceScore, Entities,
+                                                   SecretEntities)
 from pebblo.entity_classifier.utils.utils import (
-    add_custom_regex_analyzer_registry,
-    get_entities,
-)
+    add_custom_regex_analyzer_registry, get_entities)
 
 
 class EntityClassifier:
@@ -20,7 +15,8 @@ class EntityClassifier:
         self.anonymizer = AnonymizerEngine()
 
     def analyze_response(self, input_text):
-        analyzer_results = self.analyzer.analyze(text=input_text, language="en")
+        analyzer_results = self.analyzer.analyze(
+            text=input_text, language="en")
         analyzer_results = [
             result
             for result in analyzer_results
@@ -83,6 +79,7 @@ class EntityClassifier:
         """
         secret_entities = {}
         total_count = 0
+
         try:
             logger.debug("Presidio Secret Entity Classifier Started.")
             logger.debug(f"Data Input: {input_text}")
@@ -103,13 +100,16 @@ class EntityClassifier:
 
             analyzer_results = self.analyze_response(input_text)
             response = self.anomyze_response(analyzer_results, input_text)
-            logger.debug(f"Presidio Secret Entity Classifier Response: {response}")
-            secret_entities, total_count = get_entities(SecretEntities, response)
+            logger.debug(
+                f"Presidio Secret Entity Classifier Response: {response}")
+            secret_entities, total_count = get_entities(
+                SecretEntities, response)
             logger.debug(
                 f"Presidio Secret Entity Classifier Finished {secret_entities}"
             )
             logger.debug(f"Secret Entity Total count. {total_count}")
             return secret_entities, total_count
         except Exception as e:
-            logger.error(f"Presidio Secret Entity Classifier Failed, Exception: {e}")
+            logger.error(
+                f"Presidio Secret Entity Classifier Failed, Exception: {e}")
             return secret_entities, total_count
