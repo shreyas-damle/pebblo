@@ -12,6 +12,8 @@ repos:
           - id: lint
             name: lint
             entry: make lint
+            args: ["path=git diff --cached --name-only --diff-filter=ACMRTUXB | grep '.py$'' "]
+              #args: ["path=git diff --cached --name-only -- '*.py' --diff-filter=ACM | xargs -n 1 -I '{}' | tr '\n' ' ' "]
             language: python
             types: [ python ]
             verbose: true

@@ -36,13 +36,19 @@ tests:
 ################################################
 PYTHON_FILES=.
 MYPY_CACHE=.mypy_cache
+CURRENT_CHANGED_FILES=.
 
+# If PATH is provided through the command line, override the default value
+ifdef path
+    CURRENT_CHANGED_FILES_PATH:= $(path)
+    @echo "Path is: $(CURRENT_CHANGED_FILES_PATH)"
+    $(eval CURRENT_CHANGED_FILES=$(shell $(CURRENT_CHANGED_FILES_PATH)))
+endif
 lint:
-	ruff check .
-#	$(eval CURRENT_CHANGED_FILES=$(shell git diff --cached --name-only -- '*.py' --diff-filter=ACM | xargs -n 1 -I '{}' | tr '\n' ' '))
-#	ruff check $(CURRENT_CHANGED_FILES)
-#	ruff format $(CURRENT_CHANGED_FILES) --diff
-#	ruff format $(CURRENT_CHANGED_FILES)
+	@echo "Changed files are: $(CURRENT_CHANGED_FILES)"
+	ruff check $(CURRENT_CHANGED_FILES)
+	ruff format $(CURRENT_CHANGED_FILES) --diff
+	ruff format $(CURRENT_CHANGED_FILES)
 
 spell_check:
 	codespell --toml pyproject.toml
