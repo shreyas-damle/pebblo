@@ -119,6 +119,8 @@ dependencies = [
   "python-bidi==0.4.2",
   "python-dateutil==2.9.0",
   "sqlalchemy==2.0.32",
+  "filelock",
+  "UUID",
 ]
 
 # List additional groups of dependencies here (e.g. development

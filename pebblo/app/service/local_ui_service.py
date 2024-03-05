@@ -5,6 +5,7 @@ This module handles business logic for local UI
 import json
 import os
 from typing import Any, Dict, List, Tuple
+import uuid
 
 from dateutil import parser
 from fastapi import status
@@ -59,18 +60,19 @@ class AppData:
 
     def prepare_loader_response(self, app_dir, app_json):
         # Default values
-        app_name = app_json["name"]
-        load_ids = app_json.get("load_ids", [])
+        load_ids = app_json.get("load_ids", None)
+        run_ids = app_json.get("run_ids", None)
+        app_name = app_json.get("name")
+        logger.debug(f"LoadIds: {load_ids}")
+        logger.debug(f"RunIds: {run_ids}")
 
-        if not load_ids:
-            logger.debug(f"[Dashboard]: No valid loadIds found for app: {app_dir}.")
-            logger.warning(
-                f"[Dashboard]: No valid loadIs found for the application: {app_name}, skipping application."
-            )
+        if not load_ids and not run_ids:
+            logger.debug(f"No valid loadIds/runIds found for app: {app_dir}.")
+            logger.warning(f"Skipping app '{app_dir}' due to missing or invalid file")
             return
 
         # Fetching latest loadId
-        latest_load_id, app_detail_json = self.get_latest_load_id(load_ids, app_dir)
+        latest_load_id, app_detail_json = self.get_latest_load_id(app_json, app_dir)
 
         if not latest_load_id:
             logger.debug(
@@ -86,6 +88,7 @@ class AppData:
         app_name = app_json.get("name")
         findings_entities = report_summary.get("findingsEntities", 0)
         findings_topics = report_summary.get("findingsTopics", 0)
+
         app_details = LoaderAppListDetails(
             name=app_json.get("name"),
             topics=findings_topics,
@@ -114,6 +117,7 @@ class AppData:
             self.loader_data_source_list.append(updated_data_source_dict)
 
             # Add appName in findingsSummary
+
             finding_data = update_findings_summary(data, app_name)
 
             # Append only required value for dashboard
@@ -293,24 +297,30 @@ class AppData:
                 # List all apps in the directory
                 dir_path = os.listdir(dir_full_path)
 
-                all_loader_apps: list = []
-                all_retrieval_apps: list = []
                 prompt_details: dict = {}
                 total_prompt_with_findings = 0
+                all_loader_apps: list = []
+                all_retrieval_apps: list = []
+
                 # Iterating through each app in the directory
                 for app_dir in dir_path:
                     try:
                         # Skip hidden folders
                         if app_dir.startswith("."):
-                            logger.debug(
-                                f"[Dashboard]: Skipping hidden folder {app_dir}"
-                            )
+                            logger.debug(f"Skipping hidden folder {app_dir}")
                             continue
                         # Path to metadata.json
                         app_path = (
                             f"{CacheDir.HOME_DIR.value}/{app_dir}/"
                             f"{CacheDir.METADATA_FILE_PATH.value}"
                         )
+                        logger.debug(f"metadata.json path {app_path}")
+                        app_json = read_json_file(app_path)
+                        if not app_json:
+                            # Unable to find json file
+                            logger.debug(
+                                f"Metadata file ({CacheDir.METADATA_FILE_PATH.value}) not found for app: {app_dir}."
+                            )
 
                         logger.debug(f"[Dashboard]: Metadata file path {app_path}")
                         app_json = read_json_file(app_path)
@@ -350,29 +360,22 @@ class AppData:
                         logger.warning(
                             f"[Dashboard]: Error processing app {app_dir}: {err}"
                         )
-                final_prompt_details = []
-                for key, value in prompt_details.items():
-                    try:
-                        for k1, v1 in value.items():
-                            try:
-                                prompt_dict = {}
-                                prompt_dict = {"app_name": key}
-                                prompt_dict["entity_name"] = k1
-                                prompt_dict["total_prompts"] = v1["total_prompts"]
-                                prompt_dict["total_entity_count"] = v1[
-                                    "total_entity_count"
-                                ]
-                                prompt_dict["users"] = v1["users"]
-                                prompt_dict["total_users"] = v1["total_users"]
-                                final_prompt_details.append(prompt_dict)
-                            except Exception as ex:
-                                logger.warning(
-                                    f"[Dashboard]: Error in iterating key value pair in retrieval app list. Error: {ex}"
-                                )
-                    except Exception as ex:
-                        logger.warning(
-                            f"[Dashboard]: Error in iterating prompt details for all retrieval apps: {ex}"
+                        continue
+
+                    app_type = app_json.get("app_type", None)
+                    logger.debug(f"App Data: {app_json}")
+                    if app_type in ["loader", None]:
+                        loader_app = self.prepare_loader_response(app_dir, app_json)
+
+                        if loader_app:
+                            all_loader_apps.append(loader_app)
+                    elif app_type == "retrieval":
+                        retrieval_app = self.prepare_retrieval_response(
+                            app_dir, app_json
                         )
+
+                        if retrieval_app:
+                            all_retrieval_apps.append(retrieval_app)
 
                 # Sort loader apps
                 sorted_loader_apps = self._sort_loader_apps(all_loader_apps)
@@ -393,6 +396,30 @@ class AppData:
                 sorted_retrievals_apps = self._sort_retrievals_with_retrieval_count(
                     all_retrieval_apps
                 )
+                final_prompt_details = []
+                for key, value in prompt_details.items():
+                    try:
+                        for k1, v1 in value.items():
+                            try:
+                                prompt_dict = {}
+                                prompt_dict = {"app_name": key}
+                                prompt_dict["entity_name"] = k1
+                                prompt_dict["total_prompts"] = v1["total_prompts"]
+                                prompt_dict["total_entity_count"] = v1[
+                                    "total_entity_count"
+                                ]
+                                prompt_dict["users"] = v1["users"]
+                                prompt_dict["total_users"] = v1["total_users"]
+                                final_prompt_details.append(prompt_dict)
+                            except Exception as ex:
+                                logger.warning(
+                                    f"[Dashboard]: Error in iterating key value pair in retrieval app list. Error: {ex}"
+                                )
+                                continue
+                    except Exception as ex:
+                        logger.warning(
+                            f"[Dashboard]: Error in iterating prompt details for all retrieval apps: {ex}")
+                        continue
 
                 logger.debug("[Dashboard]: Preparing retrieval app response object")
                 retrieval_response = RetrievalAppList(
@@ -429,9 +456,9 @@ class AppData:
                 logger.error(f"[Dashboard]: Error in app listing. Error:{ex}")
                 return json.dumps({})
 
-    def get_loader_app_details(self, app_dir, load_ids):
+    def get_loader_app_details(self, app_dir, app_json):
         # Fetching latest loadId
-        latest_load_id, app_detail_json = self.get_latest_load_id(load_ids, app_dir)
+        latest_load_id, app_detail_json = self.get_latest_load_id(app_json, app_dir)
 
         if not latest_load_id:
             logger.debug(f"[App Details]: No valid loadIds found for app {app_dir}.")
@@ -456,34 +483,34 @@ class AppData:
             try:
                 # Path to metadata.json
                 app_path = f"{CacheDir.HOME_DIR.value}/{app_dir}/{CacheDir.METADATA_FILE_PATH.value}"
-                logger.debug(f"[App Details]: Metadata file path: {app_path}")
+                logger.debug(f"Metadata file path: {app_path}")
                 # Reading metadata.json
                 app_json = read_json_file(app_path)
                 # Condition for handling loadId
                 if not app_json:
                     # Unable to fetch loadId details
                     logger.debug(
-                        f"[App Details]: Error: Report Json {CacheDir.METADATA_FILE_PATH.value}"
-                        f"not found for app {app_path}"
+                        f"Error: Report Json {CacheDir.METADATA_FILE_PATH.value} not found for app {app_path}"
                     )
                     logger.warning(
-                        f"[App Details]: Metadata file is not present for application: {app_dir}, skipping application"
+                        f"Skipping app '{app_dir}' due to missing or invalid file"
                     )
                     return json.dumps({})
+
                 app_type = app_json.get("app_type", None)
-                app_name = app_json.get("name")
                 if app_type in ["loader", None]:
-                    load_ids = app_json.get("load_ids", [])
-                    if not load_ids:
-                        # Unable to fetch loadId details
-                        logger.debug(
-                            f"[App Details]: Error: Details not found for app {app_path}"
-                        )
+                    load_ids = app_json.get("load_ids", None)
+                    run_ids = app_json.get("run_ids", None)
+                    if not load_ids and not run_ids:
+                        # Unable to fetch loadId/runIds details
+                        logger.debug(f"No valid loadIds/runIds found for app {app_dir}.")
                         logger.warning(
-                            f"[App Details]: No valid loadIs found for the application: {app_name}, skipping application."
+                            f"Skipping app '{app_dir}' due to missing or invalid file"
                         )
                         return json.dumps({})
-                    response = self.get_loader_app_details(app_dir, load_ids)
+
+                    response = self.get_loader_app_details(app_dir, app_json)
+                    logger.debug(f"App Details: {response}")
                     return response
                 elif app_type == "retrieval":
                     app_metadata_path = (
@@ -491,14 +518,15 @@ class AppData:
                         f"{CacheDir.APPLICATION_METADATA_FILE_PATH.value}"
                     )
                     app_metadata_content = read_json_file(app_metadata_path)
+
                     # Skip app if app_metadata details are not present for some reason.
                     if not app_metadata_content:
                         logger.debug(
-                            f"[App Details]: Error: Unable to fetch app_metadata.json content for {app_dir} app"
+                            f"[App Details]: Error: Report Json {CacheDir.METADATA_FILE_PATH.value}"
+                            f"not found for app {app_path}"
                         )
                         logger.warning(
-                            f"[App Details]: Application metadata file is not present for application: {app_name},"
-                            f"skipping application."
+                            f"[App Details]: Metadata file is not present for application: {app_dir}, skipping application"
                         )
                         return json.dumps({})
                     response = self.get_retrieval_app_details(app_metadata_content)
@@ -590,23 +618,56 @@ class AppData:
                 logger.debug("Closing database session for delete application")
                 # Closing the session
                 self.db.session.close()
-
-    @staticmethod
-    def get_latest_load_id(load_ids, app_dir):
+    def get_latest_load_id(self, app_json: dict, app_dir: str):
         """
         Returns app latestLoadId for an app.
         """
-        for load_id in reversed(load_ids):
-            # Path to report.json
-            app_detail_path = f"{CacheDir.HOME_DIR.value}/{app_dir}/{load_id}/{CacheDir.REPORT_DATA_FILE_NAME.value}"
-            logger.debug(f"[App Details]: Report File path: {app_detail_path}")
-            app_detail_json = read_json_file(app_detail_path)
-            if app_detail_json:
-                # If a report is found, proceed with this load_id
-                latest_load_id = load_id
+        # Get load_ids from run_id
+        run_ids = app_json.get("run_ids", {})
+        if run_ids:
+            for run_id, load_ids in reversed(run_ids.items()):
+                load_ids = app_json["run_ids"][run_id]
+                latest_load_id, app_detail_json = self._fetch_valid_load_id(
+                    app_dir, load_ids, run_id
+                )
+                if latest_load_id is None:
+                    continue
                 return latest_load_id, app_detail_json
 
-        return None, None
+        # If not run_id then use load_id. Backward compatibility of multiple data source support.
+        else:
+            load_ids = app_json.get("load_ids", [])
+            latest_load_id, app_detail_json = self._fetch_valid_load_id(
+                app_dir, load_ids
+            )
+            return latest_load_id, app_detail_json
+
+    @staticmethod
+    def _fetch_valid_load_id(app_dir: str, load_ids: list[uuid], run_id: uuid = None):
+        try:
+            logger.debug(f"Run ID: {run_id}, Load ID's : {load_ids}")
+
+            if not load_ids:
+                app_path = f"{CacheDir.HOME_DIR.value}/{app_dir}/{CacheDir.METADATA_FILE_PATH.value}"
+                # Unable to fetch loadId details
+                logger.debug(f"Error: Details not found for app {app_path}")
+                logger.warning(
+                    f"Skipping app '{app_dir}' due to missing or invalid file"
+                )
+                return None, None
+
+            for load_id in reversed(load_ids):
+                app_detail_path = f"{CacheDir.HOME_DIR.value}/{app_dir}/{load_id}/{CacheDir.REPORT_DATA_FILE_NAME.value}"
+                logger.debug(f"Report File path: {app_detail_path}")
+                app_detail_json = read_json_file(app_detail_path)
+                if app_detail_json:
+                    # If report is found, proceed with this load_id
+                    latest_load_id = load_id
+                    return latest_load_id, app_detail_json
+            return None, None
+        except Exception as err:
+            logger.error(f"Unable to fetch valid load id: Error: {err}")
+            return None, None
 
     def get_prompts_with_findings(self, retrieval_data: List[Dict[str, Any]]) -> int:
         """
