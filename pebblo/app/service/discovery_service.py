@@ -42,27 +42,31 @@ class AppDiscover:
         """
         Create an AI App Model and return the corresponding model object
         """
-        logger.debug("Creating AI App model")
-        # Initialize Variables
-        last_used = datetime.now()
-        metadata = Metadata(createdAt=datetime.now(), modifiedAt=datetime.now())
-        ai_apps_model = AiApp(
-            metadata=metadata,
-            name=self.data.get("name"),
-            description=self.data.get("description", "-"),
-            owner=self.data.get("owner", ""),
-            pluginVersion=self.data.get("plugin_version"),
-            instanceDetails=instance_details,
-            framework=self.data.get("framework"),
-            lastUsed=last_used,
-            pebbloServerVersion=get_pebblo_server_version(),
-            pebbloClientVersion=self.data.get("plugin_version", ""),
-            chains=chain_details,
-        )
-        logger.debug(
-            f"AI_APPS [{self.application_name}]: AiApps Details: {ai_apps_model.dict()}"
-        )
-        return ai_apps_model
+        try:
+            logger.debug("Creating AI App model")
+            # Initialize Variables
+            last_used = datetime.now()
+            metadata = Metadata(createdAt=datetime.now(), modifiedAt=datetime.now())
+            ai_apps_model = AiApp(
+                metadata=metadata,
+                name=self.data.get("name"),
+                description=self.data.get("description", "-"),
+                owner=self.data.get("owner", ""),
+                pluginVersion=self.data.get("plugin_version"),
+                instanceDetails=instance_details,
+                framework=self.data.get("framework"),
+                lastUsed=last_used,
+                pebbloServerVersion=get_pebblo_server_version(),
+                pebbloClientVersion=self.data.get("plugin_version", ""),
+                chains=chain_details,
+            )
+            logger.debug(
+                f"AI_APPS [{self.application_name}]: AiApps Details: {ai_apps_model.dict()}"
+            )
+            return ai_apps_model
+        except Exception as err:
+            logger.error(f"Failed in creating ai app model, Error: {err}")
+            return False
 
     def _fetch_runtime_instance_details(self) -> InstanceDetails:
         """
@@ -93,51 +97,55 @@ class AppDiscover:
         """
         Retrieve chain details from input data and return its corresponding model object.
         """
-        # TODO: Discussion on the uniqueness of chains is not done yet,
-        #  so for now we are appending chain to existing chains in the file for this app.
-        app_metadata = self._read_file(
-            f"{CacheDir.HOME_DIR.value}/"
-            f"{self.application_name}"
-            f"{CacheDir.APPLICATION_METADATA_FILE_PATH.value}"
-        )
-        chains = list()
+        try:
+            # TODO: Discussion on the uniqueness of chains is not done yet,
+            #  so for now we are appending chain to existing chains in the file for this app.
+            app_metadata = self._read_file(
+                f"{CacheDir.HOME_DIR.value}/"
+                f"{self.application_name}"
+                f"{CacheDir.APPLICATION_METADATA_FILE_PATH.value}"
+            )
+            chains = list()
 
-        if app_metadata:
-            chains = app_metadata.get("chains", [])
-            logger.debug(f"Existing Chains : {chains}")
+            if app_metadata:
+                chains = app_metadata.get("chains", [])
+                logger.debug(f"Existing Chains : {chains}")
 
-        logger.debug(f"Input chains : {self.data.get('chains', [])}")
-        for chain in self.data.get("chains", []):
-            name = chain["name"]
-            model = chain["model"]
-            # vector db details
-            vector_db_details = []
-            for vector_db in chain.get("vector_dbs", []):
-                vector_db_obj = VectorDB(
-                    name=vector_db.get("name"),
-                    version=vector_db.get("version"),
-                    location=vector_db.get("location"),
-                    embeddingModel=vector_db.get("embedding_model"),
-                )
-
-                package_info = vector_db.get("pkg_info")
-                if package_info:
-                    pkg_info_obj = PackageInfo(
-                        projectHomePage=package_info.get("project_home_page"),
-                        documentationUrl=package_info.get("documentation_url"),
-                        pypiUrl=package_info.get("pypi_url"),
-                        licenceType=package_info.get("licence_type"),
-                        installedVia=package_info.get("installed_via"),
-                        location=package_info.get("location"),
+            logger.debug(f"Input chains : {self.data.get('chains', [])}")
+            for chain in self.data.get("chains", []):
+                name = chain["name"]
+                model = chain["model"]
+                # vector db details
+                vector_db_details = []
+                for vector_db in chain.get("vector_dbs", []):
+                    vector_db_obj = VectorDB(
+                        name=vector_db.get("name"),
+                        version=vector_db.get("version"),
+                        location=vector_db.get("location"),
+                        embeddingModel=vector_db.get("embedding_model"),
                     )
-                    vector_db_obj.pkgInfo = pkg_info_obj
 
-                vector_db_details.append(vector_db_obj)
-            chain_obj = Chain(name=name, model=model, vectorDbs=vector_db_details)
-            chains.append(chain_obj.dict())
+                    package_info = vector_db.get("pkg_info")
+                    if package_info:
+                        pkg_info_obj = PackageInfo(
+                            projectHomePage=package_info.get("project_home_page"),
+                            documentationUrl=package_info.get("documentation_url"),
+                            pypiUrl=package_info.get("pypi_url"),
+                            licenceType=package_info.get("licence_type"),
+                            installedVia=package_info.get("installed_via"),
+                            location=package_info.get("location"),
+                        )
+                        vector_db_obj.pkgInfo = pkg_info_obj
 
-        logger.debug(f"Application Name [{self.application_name}]: Chains: {chains}")
-        return chains
+                    vector_db_details.append(vector_db_obj)
+                chain_obj = Chain(name=name, model=model, vectorDbs=vector_db_details)
+                chains.append(chain_obj.dict())
+
+            logger.debug(f"Application Name [{self.application_name}]: Chains: {chains}")
+            return chains
+        except Exception as err:
+            logger.error(f"Getting Error in fetching chain details from app: Error: {err}")
+            return []
 
     @staticmethod
     def _write_file_content_to_path(file_content, file_path):
@@ -159,7 +167,7 @@ class AppDiscover:
 
     def _upsert_app_metadata_file(self):
         """
-        Update/Create app metadata file and write metadata for current run
+        Update/Create app metadata file and write metadata for current run for loader type
         """
         # Read metadata file & get current app metadata
         app_metadata_file_path = (
@@ -187,6 +195,10 @@ class AppDiscover:
         self._write_file_content_to_path(app_metadata, app_metadata_file_path)
 
     def _upsert_metadata_file(self):
+        """
+        Update/Create app metadata file and write metadata for current run for retrieval type
+        :return:
+        """
         app_metadata_file_path = (
             f"{CacheDir.HOME_DIR.value}/"
             f"{self.application_name}/{CacheDir.METADATA_FILE_PATH.value}"

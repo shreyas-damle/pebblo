@@ -1,0 +1,118 @@
+import datetime
+import json
+from unittest.mock import MagicMock, patch
+
+import pytest
+from pebblo.app.service.discovery_service import AppDiscover
+
+data = {
+    "metadata": {
+        "createdAt": "2024-04-17 13:29:29.277266",
+        "modifiedAt": "2024-04-17 13:29:29.277266"
+    },
+    "name": "RetrivalDiscoveryApp17thApr011",
+    "description": "",
+    "owner": "Shreyas Damle",
+    "pluginVersion": "0.1.0",
+    "instanceDetails": {
+        "type": None,
+        "host": "OPLPT118",
+        "path": "D:/OpcitoWorkDirectory/CloudDefense/pebblo-langchain/samples/medical-advice/testing_apps",
+        "runtime": None,
+        "ip": "172.17.128.1",
+        "language": "python",
+        "languageVersion": "3.11.8",
+        "platform": "Windows-10-10.0.19045-SP0",
+        "os": "Windows",
+        "osVersion": "10.0.19045",
+        "createdAt": "2024-04-17 13:29:29.276264"
+    },
+    "framework": {
+        "name": "langchain",
+        "version": "0.1.37"
+    },
+    "lastUsed": "2024-04-17 13:29:29.277266",
+    "pebbloServerVersion": "0.1.13",
+    "pebbloClientVersion": "0.1.0",
+    "chains": [
+        {
+            "name": "RetrievalQA",
+            "vectorDbs": [
+                {
+                    "name": "Chroma",
+                    "version": "0.4.7",
+                    "location": None,
+                    "embeddingModel": "OpenAIEmbeddings",
+                    "pkgInfo": None
+                }
+            ],
+            "model": {
+                "name": "text-davinci-003",
+                "vendor": "openai"
+            }
+        }
+    ]
+}
+
+
+
+@pytest.fixture
+def discovery():
+    return AppDiscover(data)
+
+
+def test_fetch_runtime_instance_details(discovery):
+    """
+        Testing fetching runtime instance details from discovery service
+    :param discovery:
+    :return:
+    """
+
+    expected_output = {'type': None, 'host': None, 'path': None, 'runtime': None, 'ip': None, 'language': None, 'languageVersion': None, 'platform': None, 'os': None, 'osVersion': None, 'createdAt': datetime.datetime(2024, 4, 22, 10, 39, 6, 979858)}
+    output = discovery._fetch_runtime_instance_details()
+    print(f"Output: {output.dict()}")
+    assert expected_output == output.dict()
+
+
+def test_fetch_chain_details(discovery):
+    """
+        Testing fetching chain details function from discovery service
+    :param discovery:
+    :return:
+    """
+    expected_output = [{'name': 'RetrievalQA', 'vectorDbs': [], 'model': {'name': 'text-davinci-003', 'vendor': 'openai'}}]
+    output = discovery._fetch_chain_details()
+    print(f"Output: {output}")
+    assert output == expected_output
+
+
+def test_create_ai_apps_model(discovery):
+    """
+        Testing create_ai_apps_model from discovery_service
+    :param discovery:
+    :return:
+    """
+    instance_details = {'type': None, 'host': None, 'path': None, 'runtime': None, 'ip': None, 'language': None, 'languageVersion': None, 'platform': None, 'os': None, 'osVersion': None, 'createdAt': datetime.datetime(2024, 4, 22, 10, 40, 3, 700976)}
+    chain_details = [{'name': 'RetrievalQA', 'vectorDbs': [], 'model': {'name': 'text-davinci-003', 'vendor': 'openai'}}]
+    expected_output = {'metadata': {'createdAt': datetime.datetime(2024, 4, 22, 10, 53, 15, 995325), 'modifiedAt': datetime.datetime(2024, 4, 22, 10, 53, 15, 995325)}, 'name': 'RetrivalDiscoveryApp17thApr011', 'description': '', 'owner': 'Shreyas Damle', 'pluginVersion': None, 'instanceDetails': {'type': None, 'host': None, 'path': None, 'runtime': None, 'ip': None, 'language': None, 'languageVersion': None, 'platform': None, 'os': None, 'osVersion': None, 'createdAt': datetime.datetime(2024, 4, 22, 10, 40, 3, 700976)}, 'framework': {'name': 'langchain', 'version': '0.1.37'}, 'lastUsed': datetime.datetime(2024, 4, 22, 10, 53, 15, 995322), 'pebbloServerVersion': '0.1.14', 'pebbloClientVersion': '', 'chains': [{'name': 'RetrievalQA', 'vectorDbs': [], 'model': {'name': 'text-davinci-003', 'vendor': 'openai'}}]}
+    output = discovery._create_ai_apps_model(instance_details, chain_details)
+    print(output.dict())
+    assert output == expected_output
+
+
+def test_process_request(discovery):
+    """
+        Testing process_request of discovery_service function
+    :param discovery:
+    :return:
+    """
+    expected_output = {'ai_apps_data': {'name': 'RetrivalDiscoveryApp17thApr011', 'description': '', 'owner': 'Shreyas Damle', 'instanceDetails': {'createdAt': '2024-04-22T11:04:48.523023'}, 'framework': {'name': 'langchain', 'version': '0.1.37'}, 'lastUsed': '2024-04-22T11:04:48.523082', 'pebbloServerVersion': '0.1.14', 'pebbloClientVersion': ''}, 'message': 'App Discover Request Processed Successfully'}
+    discovery._upsert_app_metadata_file = MagicMock(return_value=[])
+    discovery._upsert_metadata_file = MagicMock(return_value=[])
+    discovery._write_file_content_to_path = MagicMock(return_value=[])
+    output = discovery.process_request()
+    data = output.body
+    response_str = data.decode('utf-8')  # Decode bytes to string
+    final_output = json.loads(response_str)
+    print(final_output)
+    assert output == expected_output
