@@ -2,16 +2,23 @@ from typing import List, Optional
 
 from dotenv import load_dotenv
 from langchain.chains import PebbloRetrievalQA
-from langchain.chains.pebblo_retrieval.models import ChainInput, SemanticContext
+from langchain.chains.pebblo_retrieval.models import (
+    AuthContext,
+    ChainInput,
+    SemanticContext,
+)
 from langchain_community.document_loaders import UnstructuredFileIOLoader
 from langchain_community.document_loaders.pebblo import PebbloSafeLoader
 from langchain_community.vectorstores.qdrant import Qdrant
+# from langchain_google_community.drive import GoogleDriveLoader
 from langchain_google_community import GoogleDriveLoader
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_openai.llms import OpenAI
+from qdrant_client import QdrantClient
 from utils import format_text, get_input_as_list
 
 load_dotenv()
+QDRANT_PATH = "qdrant.db"
 
 
 class PebbloSemanticRAG:
@@ -25,7 +32,7 @@ class PebbloSemanticRAG:
     """
 
     def __init__(self, folder_id: str, collection_name: str):
-        self.app_name = "pebblo-sematic-rag"
+        self.app_name = "Shreyas29AprLoaderApp001"
         self.collection_name = collection_name
 
         # Load documents
@@ -37,22 +44,26 @@ class PebbloSemanticRAG:
                 recursive=True,
                 file_loader_cls=UnstructuredFileIOLoader,
                 file_loader_kwargs={"mode": "elements"},
+                load_auth=True,
             ),
             name=self.app_name,  # App name (Mandatory)
             owner="Joe Smith",  # Owner (Optional)
             description="Semantic filtering using PebbloSafeLoader and PebbloRetrievalQA ",  # Description (Optional)
-            load_semantic=True,
         )
         self.documents = self.loader.load()
         unique_topics = set()
         unique_entities = set()
+        unique_identities = set()
 
         for doc in self.documents:
             if doc.metadata.get("pebblo_semantic_topics"):
                 unique_topics.update(doc.metadata.get("pebblo_semantic_topics"))
             if doc.metadata.get("pebblo_semantic_entities"):
                 unique_entities.update(doc.metadata.get("pebblo_semantic_entities"))
+            if doc.metadata.get("authorized_identities"):
+                unique_identities.update(doc.metadata.get("authorized_identities"))
 
+        print(f"Authorized Identities: {list(unique_identities)}")
         print(f"Semantic Topics: {list(unique_topics)}")
         print(f"Semantic Entities: {list(unique_entities)}")
         print(f"Loaded {len(self.documents)} documents ...\n")
@@ -72,6 +83,9 @@ class PebbloSemanticRAG:
         Initialize PebbloRetrievalQA chain
         """
         return PebbloRetrievalQA.from_chain_type(
+            app_name="Shreyas29AprRetrievalApp001",
+            description="test-description",
+            owner="Shreyas Damle",
             llm=self.llm,
             chain_type="stuff",
             retriever=self.vectordb.as_retriever(),
@@ -83,20 +97,29 @@ class PebbloSemanticRAG:
         Create embeddings from documents and load into Qdrant
         """
         embeddings = OpenAIEmbeddings()
-        vectordb = Qdrant.from_documents(
-            self.documents,
-            embeddings,
-            location=":memory:",
-            collection_name=self.collection_name,
+        client = QdrantClient(path=QDRANT_PATH)
+        vectordb = Qdrant(
+            client=client, collection_name=self.collection_name, embeddings=embeddings
         )
         return vectordb
 
     def ask(
         self,
         question: str,
+        username: str,
         topics_to_deny: Optional[List[str]] = None,
         entities_to_deny: Optional[List[str]] = None,
     ):
+        auth_context = {
+            "name": "Name here",
+            "username": username,
+            "authorized_identities": [
+                "demo-user-hr@daxa.ai",
+                "demo-hr-group@daxa.ai",
+                "demo-sales-group@daxa.ai",
+            ],
+        }
+        auth_context = AuthContext(**auth_context)
         semantic_context = dict()
         if topics_to_deny:
             semantic_context["pebblo_semantic_topics"] = {"deny": topics_to_deny}
@@ -108,14 +131,17 @@ class PebbloSemanticRAG:
         )
         chain_input = ChainInput(query=question, semantic_context=semantic_context)
 
+        chain_input = ChainInput(
+            query=question, auth_context=auth_context, semantic_context=semantic_context
+        )
         return self.retrieval_chain.invoke(chain_input.dict())
 
 
 if __name__ == "__main__":
     input_collection_name = "semantic-enforcement-rag"
     service_acc_def = "credentials/service-account.json"
-    in_folder_id_def = "<google-drive-folder-id>"
-    ing_user_email_def = "<ingestion-user-email-id>"
+    in_folder_id_def = "1sR3wRgX9hGCdjtD1Vkl-b3hZuzGUP2EU"
+    ing_user_email_def = "sridhar@clouddefense.io"
 
     print("Please enter ingestion user details for loading data...")
     ingestion_user_email_address = (
@@ -141,14 +167,14 @@ if __name__ == "__main__":
         entity_to_deny = get_input_as_list(
             "Entities to deny, comma separated (Optional): "
         )
-
+        username = input("Please provide username: ")
         prompt = input("Please provide the prompt : ")
         print(
             f"\nTopics to deny: {topic_to_deny}\n"
             f"Entities to deny: {entity_to_deny}\n"
             f"Query: {format_text(prompt)}"
         )
-        response = rag_app.ask(prompt, topic_to_deny, entity_to_deny)
+        response = rag_app.ask(prompt, username, topic_to_deny, entity_to_deny)
 
         print(f"Response:\n" f"{format_text(response['result'])}")
 
