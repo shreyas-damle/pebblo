@@ -1,10 +1,11 @@
 import datetime
 from unittest.mock import MagicMock, patch
+from uuid import UUID
 
 import pytest
-from uuid import UUID
+
 from pebblo.app.models.models import DataSource, Summary
-from pebblo.app.service.doc_helper import LoaderHelper, AiDataModel
+from pebblo.app.service.doc_helper import AiDataModel, LoaderHelper
 
 data = {
     "name": "UnitTestApp",
@@ -103,10 +104,11 @@ def mock_entity_classifier_obj():
         yield mock_entity_classifier
 
 
-
 @pytest.fixture
 def mock_doc_helper_read_json_file_obj():
-    with patch("pebblo.app.service.doc_helper.read_json_file") as mock_doc_helper_read_json_file_obj:
+    with patch(
+        "pebblo.app.service.doc_helper.read_json_file"
+    ) as mock_doc_helper_read_json_file_obj:
         yield mock_doc_helper_read_json_file_obj
 
 
@@ -114,6 +116,7 @@ def mock_doc_helper_read_json_file_obj():
 def mock_get_full_path_obj():
     with patch("pebblo.app.service.doc_helper.get_full_path") as mock_get_full_path:
         yield mock_get_full_path
+
 
 @pytest.fixture
 def load_history_obj():
@@ -660,8 +663,8 @@ def test_get_classifier_response(loader_helper, mock_topic_classifier_obj):
     mock_topic_classifier_obj.predict = MagicMock(
         return_value=mock_topic_classifier_response
     )
-    loader_helper.entity_classifier_obj.presidio_entity_classifier_and_anonymizer = MagicMock(
-        return_value=mock_entity_classifier_response
+    loader_helper.entity_classifier_obj.presidio_entity_classifier_and_anonymizer = (
+        MagicMock(return_value=mock_entity_classifier_response)
     )
 
     # Call the method under test
@@ -772,7 +775,10 @@ def test_create_report_summary(loader_helper):
 
 # TestCase: 10
 def test_get_load_history(
-    loader_helper, monkeypatch, mock_doc_helper_read_json_file_obj, mock_get_full_path_obj
+    loader_helper,
+    monkeypatch,
+    mock_doc_helper_read_json_file_obj,
+    mock_get_full_path_obj,
 ):
     monkeypatch.setattr("os.path.exists", lambda path: True)
     loader_helper.load_id = 2
@@ -831,7 +837,7 @@ def test_generate_final_report(loader_helper):
                 "findingsEntities": 2,
                 "findingsTopics": 1,
                 "findings": 3,
-                "authorizedIdentities": []
+                "authorizedIdentities": [],
             }
         ]
     )
