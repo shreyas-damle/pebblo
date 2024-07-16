@@ -244,33 +244,54 @@ class LoaderHelper:
         for loader in loader_details:
             new_source_files = []
             if (
-                    loader.get("name") == loader_name
-                    and loader.get("sourcePath") == source_path
+                loader.get("name") == loader_name
+                and loader.get("sourcePath") == source_path
             ):
-
                 processed_files = []
                 # Update Existing Files
                 for source_file in loader.get("sourceFiles", []):
                     file_name = source_file["name"]
                     if file_name in loader_source_snippets.keys():
-                        source_file["findings_entities"] += loader_source_snippets[file_name].get("findings_entities",
-                                                                                                  0)
-                        source_file["findings_topics"] += loader_source_snippets[file_name].get("findings_topics ", 0)
-                        source_file["findings"] = source_file["findings_entities"] + source_file["findings_topics"]
+                        source_file["findings_entities"] += loader_source_snippets[
+                            file_name
+                        ].get("findings_entities", 0)
+                        source_file["findings_topics"] += loader_source_snippets[
+                            file_name
+                        ].get("findings_topics ", 0)
+                        source_file["findings"] = (
+                            source_file["findings_entities"]
+                            + source_file["findings_topics"]
+                        )
                         new_source_files.append(source_file)
                     else:
                         new_source_files.append(source_file)
                     processed_files.append(file_name)
 
-                 # Check for files which is not present in loader.
+                # Check for files which is not present in loader.
                 for file_name in loader_source_snippets.keys():
-                    if file_name not in processed_files and loader_source_snippets[file_name]["loader_name"] == loader_name:
-                        if loader_name != "DirectoryLoader" and loader_source_snippets[file_name]["file_level_source_path"] != source_path:
+                    if (
+                        file_name not in processed_files
+                        and loader_source_snippets[file_name]["loader_name"]
+                        == loader_name
+                    ):
+                        if (
+                            loader_name != "DirectoryLoader"
+                            and loader_source_snippets[file_name][
+                                "file_level_source_path"
+                            ]
+                            != source_path
+                        ):
                             continue
-                        dict_file = {"name": file_name,
-                                     "findings_entities": loader_source_snippets[file_name]["findings_entities"],
-                                     "findings_topics": loader_source_snippets[file_name]["findings_topics"],
-                                     "findings": loader_source_snippets[file_name]["findings"]}
+                        dict_file = {
+                            "name": file_name,
+                            "findings_entities": loader_source_snippets[file_name][
+                                "findings_entities"
+                            ],
+                            "findings_topics": loader_source_snippets[file_name][
+                                "findings_topics"
+                            ],
+                            "findings": loader_source_snippets[file_name]["findings"],
+                        }
                         new_source_files.append(dict_file)
 
                 loader["sourceFiles"] = new_source_files

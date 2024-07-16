@@ -46,15 +46,18 @@ class AppData:
 
     def prepare_loader_response(self, app_dir, app_json):
         # Default values
-        load_ids = app_json.get("load_ids", [])
+        load_ids = app_json.get("load_ids", None)
+        run_ids = app_json.get("run_ids", None)
+        logger.debug(f"LoadIds: {load_ids}")
+        logger.debug(f"RunIds: {run_ids}")
 
-        if not load_ids:
-            logger.debug(f"No valid loadIds found for app: {app_dir}.")
+        if not load_ids and not run_ids:
+            logger.debug(f"No valid loadIds/runIds found for app: {app_dir}.")
             logger.warning(f"Skipping app '{app_dir}' due to missing or invalid file")
             return
 
         # Fetching latest loadId
-        latest_load_id, app_detail_json = self.get_latest_load_id(load_ids, app_dir)
+        latest_load_id, app_detail_json = self.get_latest_load_id(app_json, app_dir)
 
         if not latest_load_id:
             logger.debug(f"No valid loadIds found for app: {app_dir}. Skipping.")
@@ -65,6 +68,7 @@ class AppData:
         app_name = app_json.get("name")
         findings_entities = report_summary.get("findingsEntities", 0)
         findings_topics = report_summary.get("findingsTopics", 0)
+
         app_details = LoaderAppListDetails(
             name=app_json.get("name"),
             topics=findings_topics,
@@ -90,6 +94,7 @@ class AppData:
             self.loader_data_source_list.append(updated_data_source_dict)
 
             # Add appName in findingsSummary
+
             finding_data = update_findings_summary(data, app_name)
 
             # Append only required value for dashboard
@@ -180,16 +185,6 @@ class AppData:
             all_loader_apps: list = []
             all_retrieval_apps: list = []
 
-            # Default values
-            all_apps = []
-            apps_at_risk = 0
-            findings = 0
-            files_findings = 0
-            data_source = 0
-            findings_list = []
-            data_source_list = []
-            document_with_findings_list = []
-
             # Iterating through each app in the directory
             for app_dir in dir_path:
                 try:
@@ -204,7 +199,6 @@ class AppData:
                     )
                     logger.debug(f"metadata.json path {app_path}")
                     app_json = read_json_file(app_path)
-
                     if not app_json:
                         # Unable to find json file
                         logger.debug(
@@ -216,101 +210,19 @@ class AppData:
                         continue
 
                     app_type = app_json.get("app_type", None)
+                    logger.debug(f"App Data: {app_json}")
                     if app_type in ["loader", None]:
                         loader_app = self.prepare_loader_response(app_dir, app_json)
+
                         if loader_app:
                             all_loader_apps.append(loader_app)
                     elif app_type == "retrieval":
                         retrieval_app = self.prepare_retrieval_response(
-                            app_dir, app_json)
+                            app_dir, app_json
+                        )
+
                         if retrieval_app:
                             all_retrieval_apps.append(retrieval_app)
-
-                    # Get load_ids from run_id
-                    # If not run_id then use load_id
-                    load_ids = app_json.get("load_ids", [])
-
-                    if not load_ids:
-                        logger.debug(f"No valid loadIds found for app: {app_dir}.")
-                        logger.warning(
-                            f"Skipping app '{app_dir}' due to missing or invalid file"
-                        )
-
-                    # Fetching latest loadId
-                    latest_load_id, app_detail_json = self.get_latest_load_id(
-                        app_json, app_dir
-                    )
-
-                    if not latest_load_id:
-                        logger.debug(
-                            f"No valid loadIds found for app: {app_dir}. Skipping."
-                        )
-                        logger.warning(
-                            f"Skipping app '{app_dir}' due to missing or invalid file"
-                        )
-                        continue
-
-                    report_summary = app_detail_json.get("reportSummary")
-                    app_name = app_json.get("name")
-                    findings_entities = report_summary.get("findingsEntities", 0)
-                    findings_topics = report_summary.get("findingsTopics", 0)
-                    app_details = LoaderAppListDetails(
-                        name=app_json.get("name"),
-                        topics=findings_topics,
-                        entities=findings_entities,
-                        owner=report_summary.get("owner"),
-                        loadId=latest_load_id,
-                    )
-
-                    # Fetch details for dashboard tabs
-                    data_source_details = app_detail_json.get("dataSources")
-
-                    # Skip app if data source details are not present for some reason.
-                    if not data_source_details:
-                        logger.debug(
-                            f"Error: Unable to fetch dataSources details for {app_dir} app"
-                        )
-                        logger.debug(f"App Detail Json : {app_detail_json}")
-                        logger.warning(
-                            f"Skipping app '{app_dir}' due to missing or invalid file"
-                        )
-                        continue
-
-                    # Prepare output data
-                    for data in data_source_details:
-                        # Add appName in dataSource
-                        updated_data_source_dict = update_data_source(
-                            data, app_name, findings_entities, findings_topics
-                        )
-                        data_source_list.append(updated_data_source_dict)
-
-                        # Add appName in findingsSummary
-                        finding_data = update_findings_summary(data, app_name)
-
-                        # Append only required value for dashboard
-                        findings_list.extend(finding_data)
-
-                    # Fetch document with findings details from app metadata.json file
-                    app_metadata_detail_path = (
-                        f"{CacheDir.HOME_DIR.value}/{app_dir}/"
-                        f"{latest_load_id}/{CacheDir.METADATA_FILE_PATH.value}"
-                    )
-                    app_metadata_json_details = read_json_file(app_metadata_detail_path)
-
-                    # Fetch required data for DocumentWithFindings
-                    documents_with_findings_data = get_document_with_findings_data(
-                        app_metadata_json_details
-                    )
-                    document_with_findings_list.extend(documents_with_findings_data)
-
-                    # Prepare counts for dashboard
-                    findings += report_summary.get("findings", 0)
-                    files_findings += report_summary.get("filesWithFindings", 0)
-                    data_source += report_summary.get("dataSources", 0)
-                    if report_summary.get("findings", 0) > 0:
-                        apps_at_risk += 1
-
-                    all_apps.append(app_details)
 
                 except Exception as err:
                     logger.warning(f"Error processing app {app_dir}: {err}")
@@ -346,9 +258,9 @@ class AppData:
             logger.error(f"Error in Dashboard app Listing. Error:{ex}")
             return json.dumps({})
 
-    def get_loader_app_details(self, app_dir, load_ids):
+    def get_loader_app_details(self, app_dir, app_json):
         # Fetching latest loadId
-        latest_load_id, app_detail_json = self.get_latest_load_id(load_ids, app_dir)
+        latest_load_id, app_detail_json = self.get_latest_load_id(app_json, app_dir)
 
         if not latest_load_id:
             logger.debug(f"No valid loadIds found for app {app_dir}.")
@@ -383,15 +295,17 @@ class AppData:
 
             app_type = app_json.get("app_type", None)
             if app_type in ["loader", None]:
-                load_ids = app_json.get("load_ids", [])
-                if not load_ids:
-                    # Unable to fetch loadId details
-                    logger.debug(f"Error: Details not found for app {app_path}")
+                load_ids = app_json.get("load_ids", None)
+                run_ids = app_json.get("run_ids", None)
+                if not load_ids and not run_ids:
+                    # Unable to fetch loadId/runIds details
+                    logger.debug(f"No valid loadIds/runIds found for app {app_dir}.")
                     logger.warning(
                         f"Skipping app '{app_dir}' due to missing or invalid file"
                     )
                     return json.dumps({})
-                response = self.get_loader_app_details(app_dir, load_ids)
+
+                response = self.get_loader_app_details(app_dir, app_json)
                 logger.debug(f"App Details: {response}")
                 return response
             elif app_type == "retrieval":
@@ -414,22 +328,6 @@ class AppData:
                 response = self.get_retrieval_app_details(app_metadata_content)
                 logger.debug(f"Retrieval App Details for {app_dir} app: {response}")
                 return response
-
-            # Fetching latest loadId
-            latest_load_id, app_detail_json = self.get_latest_load_id(app_json, app_dir)
-
-            if not latest_load_id:
-                logger.debug(f"No valid loadIds found for app {app_path}.")
-                logger.warning(
-                    f"Skipping app '{app_dir}' due to missing or invalid file"
-                )
-                return json.dumps({})
-
-            if not app_detail_json:
-                return json.dumps({})
-
-            return json.dumps(app_detail_json, indent=4)
-
         except Exception as ex:
             logger.error(f"Error in app detail. Error: {ex}")
 
