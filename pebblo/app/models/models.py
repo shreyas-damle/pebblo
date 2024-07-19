@@ -26,8 +26,8 @@ class AiDataModel(BaseModel):
     data: Optional[Union[list, str]]
     entityCount: int
     entities: dict
-    topicCount: int
-    topics: dict
+    topicCount: Optional[int]
+    topics: Optional[dict]
 
 
 class AiDocs(BaseModel):
