@@ -21,43 +21,25 @@ def write_json_to_file(data, file_path):
     """
     Write content to the specified file path
     """
-    dir_created = False
-    dir_path = ""
     try:
         # Writing file content to give a file path
         logger.debug(f"Writing content to file path: {file_path}")
         full_file_path = get_full_path(file_path)
 
-        try:
-            # Create parent directories if needed
-            dir_path = path.dirname(full_file_path)
-            makedirs(dir_path, exist_ok=False)
-            logger.info("Directory Created.")
-            dir_created = True # LoaderId
-        except FileExistsError:
-            logger.info("Directory Already Present, dir_created==False")
-            dir_created = False
-        except OSError as err:
-            logger.error(f"Failed to created application directory. Error: {err}")
-            return
-
-        logger.info("Raising testing OsError")
-        raise Exception("Directory created....")
+        # Create parent directories if needed
+        dir_path = path.dirname(full_file_path)
+        makedirs(dir_path, exist_ok=True)
 
         with open(full_file_path, "w") as metadata_file:
             dump(data, metadata_file, indent=4, cls=DatetimeEncoder)
             logger.debug(f"JSON data written successfully to: {full_file_path}")
 
+        raise OSError("Error writing JSON data.")
+        return True, ""
     except Exception as e:
-        logger.error(f"Error writing JSON data to file: {e}")
-        if dir_created:
-            # delete the application directory
-            dir_level_path = path.dirname(dir_path)
-            logger.debug(f"Deleting application directory: {dir_level_path}")
-            delete_directory(dir_level_path)
-            # Issue Workflow is moving if application get rollbacked.
-            # # Loader Doc, Creating loader dir for loader
-
+        message = f"Error writing JSON data to file: {e}"
+        logger.error(message)
+        return False, message
 
 
 def read_json_file(file_path):
@@ -304,3 +286,17 @@ def delete_directory(app_path):
         logger.exception(message)
     finally:
         return result
+
+
+def create_directory(app_path: str) -> [bool, str]:
+    try:
+        # Create application directory
+        logger.debug(f"Creating application directory at path: {app_path}")
+        full_file_path = get_full_path(app_path)
+
+        makedirs(full_file_path, exist_ok=True)
+        return True, ""
+    except OSError as err:
+        message = f"Failed to create directory, Error: {err}"
+        logger.error(message)
+        return False, message

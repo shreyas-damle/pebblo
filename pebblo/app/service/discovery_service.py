@@ -24,6 +24,8 @@ from pebblo.app.utils.utils import (
     read_json_file,
     release_lock,
     write_json_to_file,
+    create_directory,
+    delete_directory
 )
 
 
@@ -172,7 +174,8 @@ class AppDiscover:
         """
         logger.debug(f"Writing content to file path: {file_content}")
         # Writing file content to given file path
-        write_json_to_file(file_content, file_path)
+        response, message = write_json_to_file(file_content, file_path)
+        return response, message
 
     @staticmethod
     def _read_file(file_path):
@@ -209,9 +212,23 @@ class AppDiscover:
                 app_metadata["load_ids"] = [self.load_id]
 
         app_metadata["app_type"] = ApplicationTypes.LOADER.value
+
+        # Make Application Directory
+        application_dir_path = (
+            f"{CacheDir.HOME_DIR.value}/"
+            f"{self.application_name}"
+        )
+        response, message = create_directory(application_dir_path)
+        if not response:
+            return response, message
+
         # Writing metadata file
-        self._write_file_content_to_path(app_metadata, app_metadata_file_path)
-        # handle rollback here
+        response, message = self._write_file_content_to_path(app_metadata, app_metadata_file_path)
+        if not response:
+            # Unable to update metadata file, Delete directory
+            # delete Directory
+            result = delete_directory(application_dir_path)
+            return False, result
 
     def _upsert_metadata_file(self):
         """
@@ -234,8 +251,22 @@ class AppDiscover:
         else:
             app_metadata["app_type"] = ApplicationTypes.RETRIEVAL.value
 
+        # Make Application Directory
+        application_dir_path = (
+            f"{CacheDir.HOME_DIR.value}/"
+            f"{self.application_name}"
+        )
+        response, message = create_directory(application_dir_path)
+        if not response:
+            return response, message
+
         # Writing metadata file
-        self._write_file_content_to_path(app_metadata, app_metadata_file_path)
+        response, message = self._write_file_content_to_path(app_metadata, app_metadata_file_path)
+        if not response:
+            # delete Directory
+            result = delete_directory(application_dir_path)
+            return False, result
+
 
     def process_request(self):
         """
@@ -260,7 +291,15 @@ class AppDiscover:
                     f"{CacheDir.HOME_DIR.value}/{self.application_name}/{self.load_id}"
                     f"/{CacheDir.METADATA_FILE_PATH.value}"
                 )
-                self._upsert_app_metadata_file()
+                response, message = self._upsert_app_metadata_file()
+                if not response:
+                    response = DiscoverAIAppsResponseModel(
+                        pebblo_server_version=None, message=str(message)
+                    )
+                    logger.error(f"Error in Discovery API process_request. Error: {message}")
+                    return PebbloJsonResponse.build(
+                        body=response.dict(exclude_none=True), status_code=500
+                    )
 
             # Handle retrieval type application.
             else:
@@ -273,7 +312,15 @@ class AppDiscover:
                     f"{CacheDir.HOME_DIR.value}/{self.application_name}/"
                     f"/{CacheDir.APPLICATION_METADATA_FILE_PATH.value}"
                 )
-                self._upsert_metadata_file()
+                response, message = self._upsert_metadata_file()
+                if not response:
+                    response = DiscoverAIAppsResponseModel(
+                        pebblo_server_version=None, message=str(message)
+                    )
+                    logger.error(f"Error in Discovery API process_request. Error: {message}")
+                    return PebbloJsonResponse.build(
+                        body=response.dict(exclude_none=True), status_code=500
+                    )
 
                 # It's a Retrieval call, Fetching chain & retrievals details
                 app_metadata = self._read_file(file_path=file_path)
