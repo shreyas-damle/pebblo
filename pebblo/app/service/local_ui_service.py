@@ -333,7 +333,7 @@ class AppData:
             # Path to application directory
             app_dir_path = f"{CacheDir.HOME_DIR.value}/{app_name}"
             logger.debug(f"App directory path: {app_dir_path}")
-            response = delete_directory(app_dir_path, app_name)
+            response = delete_directory(app_dir_path)
             return response
         except Exception as ex:
             error_message = f"Error in delete application. Error: {ex}"

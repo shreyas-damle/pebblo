@@ -33,8 +33,6 @@ def write_json_to_file(data, file_path):
         with open(full_file_path, "w") as metadata_file:
             dump(data, metadata_file, indent=4, cls=DatetimeEncoder)
             logger.debug(f"JSON data written successfully to: {full_file_path}")
-
-        raise OSError("Error writing JSON data.")
         return True, ""
     except Exception as e:
         message = f"Error writing JSON data to file: {e}"

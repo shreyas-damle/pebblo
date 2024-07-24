@@ -20,12 +20,12 @@ from pebblo.app.models.models import (
 )
 from pebblo.app.utils.utils import (
     acquire_lock,
+    create_directory,
+    delete_directory,
     get_pebblo_server_version,
     read_json_file,
     release_lock,
     write_json_to_file,
-    create_directory,
-    delete_directory
 )
 
 
@@ -214,16 +214,15 @@ class AppDiscover:
         app_metadata["app_type"] = ApplicationTypes.LOADER.value
 
         # Make Application Directory
-        application_dir_path = (
-            f"{CacheDir.HOME_DIR.value}/"
-            f"{self.application_name}"
-        )
+        application_dir_path = f"{CacheDir.HOME_DIR.value}/" f"{self.application_name}"
         response, message = create_directory(application_dir_path)
         if not response:
             return response, message
 
         # Writing metadata file
-        response, message = self._write_file_content_to_path(app_metadata, app_metadata_file_path)
+        response, message = self._write_file_content_to_path(
+            app_metadata, app_metadata_file_path
+        )
         if not response:
             # Unable to update metadata file, Delete directory
             # delete Directory
@@ -252,21 +251,19 @@ class AppDiscover:
             app_metadata["app_type"] = ApplicationTypes.RETRIEVAL.value
 
         # Make Application Directory
-        application_dir_path = (
-            f"{CacheDir.HOME_DIR.value}/"
-            f"{self.application_name}"
-        )
+        application_dir_path = f"{CacheDir.HOME_DIR.value}/" f"{self.application_name}"
         response, message = create_directory(application_dir_path)
         if not response:
             return response, message
 
         # Writing metadata file
-        response, message = self._write_file_content_to_path(app_metadata, app_metadata_file_path)
+        response, message = self._write_file_content_to_path(
+            app_metadata, app_metadata_file_path
+        )
         if not response:
             # delete Directory
             result = delete_directory(application_dir_path)
             return False, result
-
 
     def process_request(self):
         """
@@ -296,7 +293,9 @@ class AppDiscover:
                     response = DiscoverAIAppsResponseModel(
                         pebblo_server_version=None, message=str(message)
                     )
-                    logger.error(f"Error in Discovery API process_request. Error: {message}")
+                    logger.error(
+                        f"Error in Discovery API process_request. Error: {message}"
+                    )
                     return PebbloJsonResponse.build(
                         body=response.dict(exclude_none=True), status_code=500
                     )
@@ -317,7 +316,9 @@ class AppDiscover:
                     response = DiscoverAIAppsResponseModel(
                         pebblo_server_version=None, message=str(message)
                     )
-                    logger.error(f"Error in Discovery API process_request. Error: {message}")
+                    logger.error(
+                        f"Error in Discovery API process_request. Error: {message}"
+                    )
                     return PebbloJsonResponse.build(
                         body=response.dict(exclude_none=True), status_code=500
                     )
