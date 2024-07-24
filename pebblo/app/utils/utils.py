@@ -21,18 +21,35 @@ def write_json_to_file(data, file_path):
     """
     Write content to the specified file path
     """
+    dir_created = False
+    dir_path = ""
     try:
-        # Writing file content to given file path
+        # Writing file content to give a file path
         logger.debug(f"Writing content to file path: {file_path}")
         full_file_path = get_full_path(file_path)
-        # Create parent directories if needed
-        dir_path = path.dirname(full_file_path)
-        makedirs(dir_path, exist_ok=True)
+
+        try:
+            # Create parent directories if needed
+            dir_path = path.dirname(full_file_path)
+            makedirs(dir_path, exist_ok=False)
+            dir_created = True
+        except FileExistsError:
+            dir_created = False
+        except OSError as err:
+            logger.error(f"Failed to created application directory. Error: {err}")
+            return
+
         with open(full_file_path, "w") as metadata_file:
             dump(data, metadata_file, indent=4, cls=DatetimeEncoder)
             logger.debug(f"JSON data written successfully to: {full_file_path}")
+
     except Exception as e:
         logger.error(f"Error writing JSON data to file: {e}")
+        if dir_created:
+            # delete the application directory
+            logger.debug(f"Deleting application directory: {dir_path}")
+            delete_directory(dir_path)
+
 
 
 def read_json_file(file_path):
