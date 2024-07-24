@@ -1,5 +1,6 @@
 from typing import Tuple
 from unittest.mock import Mock, patch
+from enum import Enum
 
 import pytest
 
@@ -15,6 +16,19 @@ class TestAnonymizerResult:
     def __init__(self, entity_type):
         self.entity_type = entity_type
 
+
+# Constants
+class Entities(Enum):
+    PERSON = "person"
+    GITHUB_TOKEN = "github-token"
+    AWS_ACCESS_KEY = "aws-access-key"
+    AWS_SECRET_KEY = "aws-secret-key"
+    US_ITIN = "us-itin"
+    US_SSN = "us-ssn"
+    SLACK_TOKEN = "slack-token"
+    IBAN_CODE = "iban-code"
+    CREDIT_CARD = "credit-card"
+    CREDIT_CARD_NUMBER = "credit-card-number"
 
 @pytest.fixture
 def mocked_objects():
@@ -44,66 +58,66 @@ def mocked_entity_classifier_response(mocker):
 
     anonymize_response1: Tuple[list, str] = (
         [
-            TestAnonymizerResult("PERSON"),
-            TestAnonymizerResult("GITHUB_TOKEN"),
-            TestAnonymizerResult("AWS_ACCESS_KEY"),
-            TestAnonymizerResult("PERSON"),
-            TestAnonymizerResult("US_ITIN"),
-            TestAnonymizerResult("US_SSN"),
+            TestAnonymizerResult(Entities.PERSON.name),
+            TestAnonymizerResult(Entities.GITHUB_TOKEN.name),
+            TestAnonymizerResult(Entities.AWS_ACCESS_KEY.name),
+            TestAnonymizerResult(Entities.PERSON.name),
+            TestAnonymizerResult(Entities.US_ITIN.name),
+            TestAnonymizerResult(Entities.US_SSN.name),
         ],
         input_text1,
     )
 
     anonymize_response2: Tuple[list, str] = (
         [
-            TestAnonymizerResult("GITHUB_TOKEN"),
-            TestAnonymizerResult("AWS_ACCESS_KEY"),
-            TestAnonymizerResult("US_ITIN"),
-            TestAnonymizerResult("US_SSN"),
+            TestAnonymizerResult(Entities.GITHUB_TOKEN.name),
+            TestAnonymizerResult(Entities.AWS_ACCESS_KEY.name),
+            TestAnonymizerResult(Entities.US_ITIN.name),
+            TestAnonymizerResult(Entities.US_SSN.name),
         ],
         mock_input_text1_anonymize_snippet_true,
     )
 
     anonymize_response3: Tuple[list, str] = (
         [
-            TestAnonymizerResult("SLACK_TOKEN"),
-            TestAnonymizerResult("SLACK_TOKEN"),
-            TestAnonymizerResult("GITHUB_TOKEN"),
-            TestAnonymizerResult("AWS_SECRET_KEY"),
-            TestAnonymizerResult("AWS_ACCESS_KEY"),
-            TestAnonymizerResult("US_ITIN"),
-            TestAnonymizerResult("IBAN_CODE"),
-            TestAnonymizerResult("CREDIT_CARD"),
-            TestAnonymizerResult("US_SSN"),
+            TestAnonymizerResult(Entities.SLACK_TOKEN.name),
+            TestAnonymizerResult(Entities.SLACK_TOKEN.name),
+            TestAnonymizerResult(Entities.GITHUB_TOKEN.name),
+            TestAnonymizerResult(Entities.AWS_SECRET_KEY.name),
+            TestAnonymizerResult(Entities.AWS_ACCESS_KEY.name),
+            TestAnonymizerResult(Entities.US_ITIN.name),
+            TestAnonymizerResult(Entities.IBAN_CODE.name),
+            TestAnonymizerResult(Entities.CREDIT_CARD.name),
+            TestAnonymizerResult(Entities.US_SSN.name),
         ],
         input_text2,
     )
 
     anonymize_response4: Tuple[list, str] = (
         [
-            TestAnonymizerResult("SLACK_TOKEN"),
-            TestAnonymizerResult("PERSON"),
-            TestAnonymizerResult("SLACK_TOKEN"),
-            TestAnonymizerResult("PERSON"),
-            TestAnonymizerResult("PERSON"),
-            TestAnonymizerResult("GITHUB_TOKEN"),
-            TestAnonymizerResult("AWS_SECRET_KEY"),
-            TestAnonymizerResult("AWS_ACCESS_KEY"),
-            TestAnonymizerResult("US_ITIN"),
-            TestAnonymizerResult("IBAN_CODE"),
-            TestAnonymizerResult("CREDIT_CARD"),
+            TestAnonymizerResult(Entities.SLACK_TOKEN.name),
+            TestAnonymizerResult(Entities.PERSON.name),
+            TestAnonymizerResult(Entities.SLACK_TOKEN.name),
+            TestAnonymizerResult(Entities.PERSON.name),
+            TestAnonymizerResult(Entities.PERSON.name),
+            TestAnonymizerResult(Entities.GITHUB_TOKEN.name),
+            TestAnonymizerResult(Entities.AWS_SECRET_KEY.name),
+            TestAnonymizerResult(Entities.AWS_ACCESS_KEY.name),
+            TestAnonymizerResult(Entities.US_ITIN.name),
+            TestAnonymizerResult(Entities.IBAN_CODE.name),
+            TestAnonymizerResult(Entities.CREDIT_CARD.name),
             TestAnonymizerResult("NRP"),
-            TestAnonymizerResult("PERSON"),
+            TestAnonymizerResult(Entities.PERSON.name),
             TestAnonymizerResult("NRP"),
-            TestAnonymizerResult("PERSON"),
-            TestAnonymizerResult("US_SSN"),
+            TestAnonymizerResult(Entities.PERSON.name),
+            TestAnonymizerResult(Entities.US_SSN.name),
             TestAnonymizerResult("DATE_TIME"),
-            TestAnonymizerResult("PERSON"),
-            TestAnonymizerResult("DATE_TIME"),
-            TestAnonymizerResult("DATE_TIME"),
+            TestAnonymizerResult(Entities.PERSON.name),
             TestAnonymizerResult("DATE_TIME"),
             TestAnonymizerResult("DATE_TIME"),
-            TestAnonymizerResult("PERSON"),
+            TestAnonymizerResult("DATE_TIME"),
+            TestAnonymizerResult("DATE_TIME"),
+            TestAnonymizerResult(Entities.PERSON.name),
         ],
         mock_input_text2_anonymize_snippet_true,
     )
@@ -158,10 +172,10 @@ def test_presidio_entity_classifier_and_anonymizer(
         anonymized_text,
     ) = entity_classifier.presidio_entity_classifier_and_anonymizer(input_text1)
     assert entities == {
-        "github-token": 1,
-        "aws-access-key": 1,
-        "us-itin": 1,
-        "us-ssn": 1,
+        Entities.GITHUB_TOKEN.name: 1,
+        Entities.AWS_ACCESS_KEY.value: 1,
+        Entities.US_ITIN.value: 1,
+        Entities.US_SSN.value: 1,
     }
     assert total_count == 4
     assert anonymized_text == input_text1
@@ -174,10 +188,10 @@ def test_presidio_entity_classifier_and_anonymizer(
         input_text1, anonymize_snippets=True
     )
     assert entities == {
-        "github-token": 1,
-        "aws-access-key": 1,
-        "us-itin": 1,
-        "us-ssn": 1,
+        Entities.GITHUB_TOKEN.value: 1,
+        Entities.AWS_ACCESS_KEY.value: 1,
+        Entities.US_ITIN.value: 1,
+        Entities.US_SSN.value: 1,
     }
     assert total_count == 4
     assert anonymized_text == mock_input_text1_anonymize_snippet_true
@@ -188,14 +202,14 @@ def test_presidio_entity_classifier_and_anonymizer(
         anonymized_text,
     ) = entity_classifier.presidio_entity_classifier_and_anonymizer(input_text2)
     assert entities == {
-        "slack-token": 2,
-        "github-token": 1,
-        "aws-access-key": 1,
-        "aws-secret-key": 1,
-        "us-itin": 1,
-        "iban-code": 1,
-        "credit-card-number": 1,
-        "us-ssn": 1,
+        Entities.SLACK_TOKEN.value: 2,
+        Entities.GITHUB_TOKEN.value: 1,
+        Entities.AWS_ACCESS_KEY.value: 1,
+        Entities.AWS_SECRET_KEY.value: 1,
+        Entities.US_ITIN.value: 1,
+        Entities.IBAN_CODE.value: 1,
+        Entities.CREDIT_CARD_NUMBER.value: 1,
+        Entities.US_SSN.value: 1,
     }
 
     assert total_count == 9
@@ -209,14 +223,14 @@ def test_presidio_entity_classifier_and_anonymizer(
         input_text1, anonymize_snippets=True
     )
     assert entities == {
-        "slack-token": 2,
-        "github-token": 1,
-        "aws-access-key": 1,
-        "aws-secret-key": 1,
-        "us-itin": 1,
-        "iban-code": 1,
-        "credit-card-number": 1,
-        "us-ssn": 1,
+        Entities.SLACK_TOKEN.value: 2,
+        Entities.GITHUB_TOKEN.value: 1,
+        Entities.AWS_ACCESS_KEY.value: 1,
+        Entities.AWS_SECRET_KEY.value: 1,
+        Entities.US_ITIN.value: 1,
+        Entities.IBAN_CODE.value: 1,
+        Entities.CREDIT_CARD_NUMBER.value: 1,
+        Entities.US_SSN.value: 1,
     }
     assert total_count == 9
     assert anonymized_text == mock_input_text2_anonymize_snippet_true

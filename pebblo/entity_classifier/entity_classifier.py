@@ -75,9 +75,9 @@ class EntityClassifier:
                  anonymized_text: Input text in anonymized form.
         Example:
 
-        input_text = " My SSN is 222-85-4836.
-        ITIN number 993-77 0690
-        And AWS Access Key is: AKIAQIPT4PDORIRTV6PH."
+        input_text = " My SSN is <ssn>.
+        ITIN number <itin-number>
+        And AWS Access Key is: <aws-access-key>."
         response:
         entities = {'aws-access-key': 1, 'us-itin': 1, 'us-ssn': 1}
         total_count = 3
@@ -88,6 +88,7 @@ class EntityClassifier:
         entities = {}
         total_count = 0
         anonymized_text = ""
+        input_text = ""
         try:
             logger.debug("Presidio Entity Classifier and Anonymizer Started.")
             logger.debug(f"Data Input: {input_text}")

@@ -47,3 +47,6 @@ class ClassifierConstants(Enum):
 class ApplicationTypes(Enum):
     LOADER = "loader"
     RETRIEVAL = "retrieval"
+
+
+INDEX_DOT_HTML = "index.html"

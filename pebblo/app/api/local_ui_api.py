@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 
-from pebblo.app.enums.enums import CacheDir
+from pebblo.app.enums.enums import CacheDir, INDEX_DOT_HTML
 from pebblo.app.service.local_ui_service import AppData
 from pebblo.app.utils.utils import get_full_path
 
@@ -25,7 +25,7 @@ class App:
     def dashboard(request: Request):
         app_data = AppData()
         return templates.TemplateResponse(
-            "index.html",
+            INDEX_DOT_HTML,
             {
                 "request": request,
                 "data": app_data.get_all_apps_details(),
@@ -37,7 +37,7 @@ class App:
     def app_details(request: Request, app_name: str):
         app_data = AppData()
         return templates.TemplateResponse(
-            "index.html",
+            INDEX_DOT_HTML,
             {
                 "request": request,
                 "data": app_data.get_app_details(app_name),
@@ -70,7 +70,7 @@ class App:
     @staticmethod
     def page_not_found(request: Request):
         return templates.TemplateResponse(
-            "index.html",
+            INDEX_DOT_HTML,
             {
                 "request": request,
                 "data": {},
