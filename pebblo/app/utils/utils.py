@@ -32,12 +32,17 @@ def write_json_to_file(data, file_path):
             # Create parent directories if needed
             dir_path = path.dirname(full_file_path)
             makedirs(dir_path, exist_ok=False)
-            dir_created = True
+            logger.info("Directory Created.")
+            dir_created = True # LoaderId
         except FileExistsError:
+            logger.info("Directory Already Present, dir_created==False")
             dir_created = False
         except OSError as err:
             logger.error(f"Failed to created application directory. Error: {err}")
             return
+
+        logger.info("Raising testing OsError")
+        raise Exception("Directory created....")
 
         with open(full_file_path, "w") as metadata_file:
             dump(data, metadata_file, indent=4, cls=DatetimeEncoder)
@@ -47,8 +52,11 @@ def write_json_to_file(data, file_path):
         logger.error(f"Error writing JSON data to file: {e}")
         if dir_created:
             # delete the application directory
-            logger.debug(f"Deleting application directory: {dir_path}")
-            delete_directory(dir_path)
+            dir_level_path = path.dirname(dir_path)
+            logger.debug(f"Deleting application directory: {dir_level_path}")
+            delete_directory(dir_level_path)
+            # Issue Workflow is moving if application get rollbacked.
+            # # Loader Doc, Creating loader dir for loader
 
 
 
@@ -267,29 +275,28 @@ def release_lock(lock_file_path: str):
         pass  # The lock file doesn't exist, nothing to release
 
 
-def delete_directory(app_path, app_name=None):
-    message = ""
+def delete_directory(app_path):
     result = {}
     try:
         full_path = get_full_path(app_path)
         logger.info(f"DirPath: {full_path}")
         rmtree(full_path)
-        message = f"Application {app_name} has been deleted."
+        message = f"Directory {app_path} has been deleted."
         logger.info(message)
         result = {"message": message, "status_code": status.HTTP_200_OK}
     except FileNotFoundError:
-        message = f"Application {app_name} does not exist."
+        message = f"Directory {app_path} does not exist."
         result = {"message": message, "status_code": status.HTTP_404_NOT_FOUND}
         logger.exception(message)
     except PermissionError:
-        message = f"Permission denied: Unable to delete application {app_name}."
+        message = f"Permission denied: Unable to delete directory {app_path}."
         result = {
             "message": message,
             "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
         }
         logger.exception(message)
     except Exception as e:
-        message = f"Unable to delete application {app_name}, Error: {e}"
+        message = f"Unable to delete directory {app_path}, Error: {e}"
         result = {
             "message": message,
             "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,

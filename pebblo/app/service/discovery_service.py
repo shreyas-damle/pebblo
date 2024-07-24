@@ -211,6 +211,7 @@ class AppDiscover:
         app_metadata["app_type"] = ApplicationTypes.LOADER.value
         # Writing metadata file
         self._write_file_content_to_path(app_metadata, app_metadata_file_path)
+        # handle rollback here
 
     def _upsert_metadata_file(self):
         """
