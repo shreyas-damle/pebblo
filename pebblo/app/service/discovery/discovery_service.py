@@ -96,10 +96,9 @@ class AppDiscover:
     def _get_app_class(self):
         AppClass = None
         load_id = self.data.get("load_id") or None
-        run_id = self.data.get("run_id") or None
         if load_id:
             AppClass = AiDataLoaderTable
-        elif run_id:
+        else:
             AppClass = AiAppsTable
 
         return AppClass
@@ -183,7 +182,6 @@ class AppDiscover:
             chain_details = []
             retrievals_details = []
             load_id = self.data.get("load_id") or None
-            run_id = self.data.get("run_id") or None
 
             AppClass = self._get_app_class()
             if not AppClass:
@@ -194,7 +192,7 @@ class AppDiscover:
             self.db.create_session()
 
             # get or create app
-            ai_app_obj = get_or_create_app(self.db, self.app_name, load_id, AppClass)
+            ai_app_obj = get_or_create_app(self.db, self.app_name, AppClass)
             if not ai_app_obj:
                 message = "Unable to get or create aiapp details"
                 return return_response(message=message, status_code=500)
@@ -204,7 +202,7 @@ class AppDiscover:
             # Get instance details
             instance_details = self._fetch_runtime_instance_details()
 
-            if run_id:
+            if load_id is None:
                 # its retrieval application
 
                 # Get chain details
