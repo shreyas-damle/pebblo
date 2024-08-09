@@ -182,7 +182,6 @@ class AppDiscover:
             chain_details = []
             retrievals_details = []
             load_id = self.data.get("load_id") or None
-
             AppClass = self._get_app_class()
             if not AppClass:
                 message = "No load_id's or run_id's are present, Invalid Request"
@@ -192,7 +191,7 @@ class AppDiscover:
             self.db.create_session()
 
             # get or create app
-            ai_app_obj = get_or_create_app(self.db, self.app_name, AppClass)
+            ai_app_obj = get_or_create_app(self.db, self.app_name, AppClass, self.data)
             if not ai_app_obj:
                 message = "Unable to get or create aiapp details"
                 return return_response(message=message, status_code=500)
