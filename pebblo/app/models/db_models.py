@@ -1,7 +1,8 @@
 """AI(Apps) Model Class"""
 
-from typing import Optional, Union, List, Dict
+from typing import Dict, List, Optional, Union
 from uuid import uuid4
+
 from pydantic import BaseModel, Field
 
 
@@ -41,7 +42,9 @@ class AiBaseApp(BaseModel):
     metadata: Metadata
     instanceDetails: Optional[InstanceDetails]
     framework: Optional[FrameworkInfo] = Field(default_factory=FrameworkInfo)
-    policyViolations: Optional[List[dict]] = []  # list of policy id, title and other details
+    policyViolations: Optional[
+        List[dict]
+    ] = []  # list of policy id, title and other details
     pebbloServerVersion: Optional[str] = None
     pebbloClientVersion: Optional[str] = None
 

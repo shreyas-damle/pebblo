@@ -26,5 +26,7 @@ def get_or_create_app(db, app_name, app_class, data):
             logger.info(f"Fetching or creating {app_class} details finished.")
             return app_object
     except Exception as err:
-        logger.error(f"Failed in fetching and creating {app_class} object. Error: {err}")
+        logger.error(
+            f"Failed in fetching and creating {app_class} object. Error: {err}"
+        )
         return False

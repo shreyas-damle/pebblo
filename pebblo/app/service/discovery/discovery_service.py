@@ -4,15 +4,15 @@ from datetime import datetime
 from sqlalchemy.inspection import inspect
 
 from pebblo.app.enums.enums import ApplicationTypes
-from pebblo.app.models.db_models  import (
+from pebblo.app.models.db_models import (
     AiApp,
+    AiDataLoader,
     Chain,
     FrameworkInfo,
     InstanceDetails,
     Metadata,
     PackageInfo,
     VectorDB,
-    AiDataLoader
 )
 from pebblo.app.models.sqltable import AiAppsTable, AiDataLoaderTable
 from pebblo.app.service.discovery.common import get_or_create_app
@@ -54,7 +54,7 @@ class AppDiscover:
             platform=runtime_dict.get("platform"),
             os=runtime_dict.get("os"),
             osVersion=runtime_dict.get("os_version"),
-            createdAt=self._get_current_datetime()
+            createdAt=self._get_current_datetime(),
         )
         logger.debug(
             f"AI_APPS [{self.app_name}]: Instance Details: {instance_details_model.dict()}"
@@ -227,7 +227,7 @@ class AppDiscover:
                 instance_details=instance_details,
                 chain_details=chain_details,
                 retrievals_details=retrievals_details,
-                app_type=app_type
+                app_type=app_type,
             )
 
             status, message = self.db.update_data(
