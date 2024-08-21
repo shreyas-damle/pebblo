@@ -20,7 +20,8 @@ from pebblo.app.models.models import (
     RetrievalAppListDetails,
 )
 from pebblo.app.service.local_ui.retriever_apps import RetrieverApp
-from pebblo.app.service.local_ui.utils import get_app_type
+
+# from pebblo.app.service.local_ui.utils import get_app_type
 from pebblo.app.storage.sqlite_db import SQLiteClient
 from pebblo.app.utils.utils import (
     delete_directory,
@@ -546,12 +547,12 @@ class AppData:
                 # create session
                 self.db.create_session()
 
-                app_type = get_app_type(self.db, app_name)
-                if app_type == ApplicationTypes.LOADER.value:
-                    pass  # TODO: delete loader apps
-                elif app_type == ApplicationTypes.RETRIEVAL.value:
-                    retriever_app_obj = RetrieverApp()
-                    retriever_app_obj.delete_retrieval_app(self.db, app_name)
+                # app_type = get_app_type(self.db, app_name)
+                # if app_type == ApplicationTypes.LOADER.value:
+                #     pass  # TODO: delete loader apps
+                # elif app_type == ApplicationTypes.RETRIEVAL.value:
+                #     retriever_app_obj = RetrieverApp()
+                #     retriever_app_obj.delete_retrieval_app(self.db, app_name)
                 message = f"Application {app_name} has been deleted."
                 response = {"message": message, "status_code": status.HTTP_200_OK}
             except Exception as ex:
