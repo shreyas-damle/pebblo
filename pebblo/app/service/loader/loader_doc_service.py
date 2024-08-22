@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from os import makedirs, path
 
-from pebblo.app.enums.enums import ApplicationTypes, ClassifierConstants, CacheDir
+from pebblo.app.enums.enums import ApplicationTypes, CacheDir, ClassifierConstants
 from pebblo.app.libs.responses import PebbloJsonResponse
 from pebblo.app.models.db_models import (
     AiDataModel,
@@ -18,7 +18,7 @@ from pebblo.app.service.discovery.common import get_or_create_app
 from pebblo.app.service.loader.document.document import AiDocumentHandler
 from pebblo.app.service.local_ui.loader_apps import LoaderApp
 from pebblo.app.storage.sqlite_db import SQLiteClient
-from pebblo.app.utils.utils import get_current_time, timeit, get_full_path
+from pebblo.app.utils.utils import get_current_time, get_full_path, timeit
 from pebblo.entity_classifier.entity_classifier import EntityClassifier
 from pebblo.log import get_logger
 from pebblo.reports.reports import Reports
@@ -63,7 +63,9 @@ class AppLoaderDoc:
                 renderer=renderer,
             )
             if status:
-                logger.info(f"PDF report generated, please check path : {full_file_path}")
+                logger.info(
+                    f"PDF report generated, please check path : {full_file_path}"
+                )
             else:
                 raise Exception(result)
         except Exception as err:
@@ -77,8 +79,8 @@ class AppLoaderDoc:
             if isinstance(value, str):
                 try:
                     # Attempt to parse the date string
-                    dct[key] = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
-                except (ValueError, TypeError) as e:
+                    dct[key] = datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f")
+                except (ValueError, TypeError):
                     # If it fails, print the error and leave the value as is
                     pass
         return dct
@@ -95,9 +97,7 @@ class AppLoaderDoc:
             final_report = json.loads(report_data, object_hook=self._datetime_decoder)
 
             # Writing a PDF report to app directory
-            app_report_file_path = (
-                f"{CacheDir.HOME_DIR.value}/{app_name}/{CacheDir.REPORT_FILE_NAME.value}"
-            )
+            app_report_file_path = f"{CacheDir.HOME_DIR.value}/{app_name}/{CacheDir.REPORT_FILE_NAME.value}"
             self._pdf_writer(app_report_file_path, final_report)
 
             # Writing a PDF report to current load id directory
@@ -294,7 +294,9 @@ class AppLoaderDoc:
 
             if self.data["loading_end"]:
                 # Get report data & Write PDF report
-                self._write_pdf_report(self.db, app_loader_details["name"], app_loader_details["id"])
+                self._write_pdf_report(
+                    self.db, app_loader_details["name"], app_loader_details["id"]
+                )
 
         except Exception as err:
             message = f"Loader Doc API Request failed, Error: {err}"

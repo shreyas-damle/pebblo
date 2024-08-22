@@ -590,9 +590,7 @@ class AppData:
                 logger.debug(message)
                 return response
             finally:
-                logger.debug(
-                    "Closing database session for delete application"
-                )
+                logger.debug("Closing database session for delete application")
                 # Closing the session
                 self.db.session.close()
 

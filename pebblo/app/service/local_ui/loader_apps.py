@@ -1,6 +1,8 @@
 import json
 from os import makedirs, path
+
 from fastapi import status
+
 from pebblo.app.enums.enums import CacheDir, ReportConstants
 from pebblo.app.models.models import (
     DataSource,
@@ -42,7 +44,7 @@ class LoaderApp:
         response = []
         for snippet_id in snippet_ids:
             status, output = self.db.query(AiSnippetsTable, {"id": snippet_id})
-            if not status or len(output)==0:
+            if not status or len(output) == 0:
                 continue
             snippet_details = output[0].data
             snippet_obj = {
@@ -78,7 +80,9 @@ class LoaderApp:
                         findings["fileCount"] = len(app_data["documents"])
                         total_snippet_count += findings["snippetCount"]
                         snippets.extend(
-                            self._get_snippet_details(entity_data["snippetIds"], app_data["owner"])
+                            self._get_snippet_details(
+                                entity_data["snippetIds"], app_data["owner"]
+                            )
                         )
                         break
                 if not findings_exists:
@@ -114,7 +118,9 @@ class LoaderApp:
                         findings["fileCount"] = len(app_data["documents"])
                         total_snippet_count += findings["snippetCount"]
                         snippets.extend(
-                            self._get_snippet_details(topic_data["snippetIds"], app_data["owner"])
+                            self._get_snippet_details(
+                                topic_data["snippetIds"], app_data["owner"]
+                            )
                         )
                         break
                 if not findings_exists:
@@ -332,7 +338,6 @@ class LoaderApp:
             logger.debug(message)
             return json.dumps(report_data, default=str, indent=4)
 
-
     def _count_files_with_findings(self, app_data):
         """
         Return the count of files that have associated findings.
@@ -432,8 +437,12 @@ class LoaderApp:
             source_path = loader.get("sourcePath")
             source_type = loader.get("sourceType")
             source_size = loader.get("sourceSize")
-            total_snippet_count = sum(map(lambda x: x["totalSnippetCount"], raw_data["dataSource"]))
-            displayed_snippet_count = sum(map(lambda x: x["displayedSnippetCount"], raw_data["dataSource"]))
+            total_snippet_count = sum(
+                map(lambda x: x["totalSnippetCount"], raw_data["dataSource"])
+            )
+            displayed_snippet_count = sum(
+                map(lambda x: x["displayedSnippetCount"], raw_data["dataSource"])
+            )
 
             data_source_obj = DataSource(
                 name=name,
@@ -483,14 +492,11 @@ class LoaderApp:
         )
         return report_dict.dict()
 
-
     def _delete(self, db, table_name, filter_query):
         try:
             logger.info(f"Delete entry from table {table_name}")
             # delete entry from Table
-            _, ai_table_data = db.query(
-                table_obj=table_name, filter_query=filter_query
-            )
+            _, ai_table_data = db.query(table_obj=table_name, filter_query=filter_query)
             if ai_table_data and len(ai_table_data) > 0:
                 db.delete(ai_table_data)
             logger.debug(f"entry deleted from table {table_name}")
