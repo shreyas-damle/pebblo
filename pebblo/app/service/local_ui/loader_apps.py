@@ -38,7 +38,7 @@ class LoaderApp:
         self.loader_document_with_findings_list = []
         self.loader_findings_summary_list = []
 
-    def _get_snippet_details(self, snippet_ids):
+    def _get_snippet_details(self, snippet_ids, owner):
         response = []
         for snippet_id in snippet_ids:
             _, output = self.db.query(AiSnippetsTable, {"id": snippet_id})
@@ -48,7 +48,7 @@ class LoaderApp:
                 "sourcePath": snippet_details["sourcePath"],
                 # "topicDetails": {}, # TODO: To  be added post 0.1.18
                 # "entityDetails": {}, # TODO: to be added post 0.1.18
-                "fileOwner": "hard code",
+                "fileOwner": owner,
                 "authorizedIdentities": [],
             }
             response.append(snippet_obj)
@@ -76,7 +76,7 @@ class LoaderApp:
                         findings["fileCount"] = len(app_data["documents"])
                         total_snippet_count += findings["snippetCount"]
                         snippets.extend(
-                            self._get_snippet_details(entity_data["snippetIds"])
+                            self._get_snippet_details(entity_data["snippetIds"], app_data["owner"])
                         )
                         break
                 if not findings_exists:
@@ -89,7 +89,7 @@ class LoaderApp:
                         "snippetCount": len(entity_data["snippetIds"]),
                         "fileCount": len(app_data["documents"]),
                         "snippets": self._get_snippet_details(
-                            entity_data["snippetIds"]
+                            entity_data["snippetIds"], app_data["owner"]
                         ),
                     }
                     total_snippet_count += findings["snippetCount"]
@@ -112,7 +112,7 @@ class LoaderApp:
                         findings["fileCount"] = len(app_data["documents"])
                         total_snippet_count += findings["snippetCount"]
                         snippets.extend(
-                            self._get_snippet_details(topic_data["snippetIds"])
+                            self._get_snippet_details(topic_data["snippetIds"], app_data["owner"])
                         )
                         break
                 if not findings_exists:
@@ -122,7 +122,9 @@ class LoaderApp:
                         "findingsType": "topics",
                         "snippetCount": len(topic_data["snippetIds"]),
                         "fileCount": len(app_data["documents"]),
-                        "snippets": self._get_snippet_details(topic_data["snippetIds"]),
+                        "snippets": self._get_snippet_details(
+                            topic_data["snippetIds"], app_data["owner"]
+                        ),
                     }
                     total_snippet_count += findings["snippetCount"]
                     shallow_copy = findings.copy()
@@ -286,14 +288,10 @@ class LoaderApp:
         current_load_report_file_path = f"{CacheDir.HOME_DIR.value}/{app_name}/{load_id}/{CacheDir.REPORT_FILE_NAME.value}"
         self._pdf_writer(current_load_report_file_path, final_report)
 
-    def get_loader_app_details(self, app_name):
+    def get_loader_app_details(self, db, app_name):
         try:
             logger.debug(f"Loader App Input: {app_name}")
-            self.db = SQLiteClient()
-
-            # create session
-            self.db.create_session()
-
+            self.db = db
             filter_query = {"name": app_name}
             _, ai_loader_apps = self.db.query(
                 table_obj=AiDataLoaderTable, filter_query=filter_query
@@ -318,24 +316,20 @@ class LoaderApp:
             logger.debug(f"ReportData: {report_data}")
 
             # Writing a report in PDF format
-            app_name = loader_app["name"]
-            load_id = loader_app["id"]
-            self._write_pdf_report(report_data, app_name, load_id)
+            # app_name = loader_app["name"]
+            # load_id = loader_app["id"]
+            # self._write_pdf_report(report_data, app_name, load_id)
 
         except Exception as ex:
-            logger.error(f"[App Detail]: Error in loader app listing. Error:{ex}")
-            # Getting error, Rollback everything we did in this run.
-            self.db.session.rollback()
-
+            message = f"[App Detail]: Error in loader app listing. Error:{ex}"
+            logger.error(message)
+            raise Exception(message)
         else:
             # Commit will only happen when everything went well.
             message = "loader app response prepared successfully"
             logger.debug(message)
             return json.dumps(report_data, default=str, indent=4)
-        finally:
-            logger.debug("Closing database session for preparing loader apps")
-            # Closing the session
-            self.db.session.close()
+
 
     def _count_files_with_findings(self, app_data):
         """
@@ -436,10 +430,8 @@ class LoaderApp:
             source_path = loader.get("sourcePath")
             source_type = loader.get("sourceType")
             source_size = loader.get("sourceSize")
-            total_snippet_count = raw_data["dataSource"][0][
-                "totalSnippetCount"
-            ]  # TODO: Implement lambda whihc calculate all snippet count
-            displayed_snippet_count = raw_data["dataSource"][0]["displayedSnippetCount"]
+            total_snippet_count = sum(map(lambda x: x["totalSnippetCount"], raw_data["dataSource"]))
+            displayed_snippet_count = sum(map(lambda x: x["displayedSnippetCount"], raw_data["dataSource"]))
 
             data_source_obj = DataSource(
                 name=name,
