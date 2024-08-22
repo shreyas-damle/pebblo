@@ -1,6 +1,6 @@
 import json
 from os import makedirs, path
-
+from fastapi import status
 from pebblo.app.enums.enums import CacheDir, ReportConstants
 from pebblo.app.models.models import (
     DataSource,
@@ -41,7 +41,9 @@ class LoaderApp:
     def _get_snippet_details(self, snippet_ids, owner):
         response = []
         for snippet_id in snippet_ids:
-            _, output = self.db.query(AiSnippetsTable, {"id": snippet_id})
+            status, output = self.db.query(AiSnippetsTable, {"id": snippet_id})
+            if not status or len(output)==0:
+                continue
             snippet_details = output[0].data
             snippet_obj = {
                 "snippet": snippet_details["doc"],
@@ -480,3 +482,46 @@ class LoaderApp:
             clientVersion=app_data.get("clientVersion", {}),
         )
         return report_dict.dict()
+
+
+    def _delete(self, db, table_name, filter_query):
+        try:
+            logger.info(f"Delete entry from table {table_name}")
+            # delete entry from Table
+            _, ai_table_data = db.query(
+                table_obj=table_name, filter_query=filter_query
+            )
+            if ai_table_data and len(ai_table_data) > 0:
+                db.delete(ai_table_data)
+            logger.debug(f"entry deleted from table {table_name}")
+        except Exception as err:
+            message = f"Failed in delete entry from table {table_name}, Error: {err}"
+            logger.error(message)
+            raise Exception(message)
+
+    def delete_loader_app(self, db, app_name):
+        try:
+            # delete entry from AiSnippet Table
+            self._delete(db, AiSnippetsTable, {"appName": app_name})
+
+            # delete entry from AiDocument Table
+            self._delete(db, AiDocumentTable, filter_query={"appName": app_name})
+
+            # delete entry from AiDataSource Table
+            self._delete(db, AiDataSourceTable, filter_query={"appName": app_name})
+
+            # delete entry from AiDataLoader Table
+            self._delete(db, AiDataLoaderTable, filter_query={"name": app_name})
+
+            message = f"Application {app_name} has been deleted."
+            logger.info(message)
+            result = {"message": message, "status_code": status.HTTP_200_OK}
+        except Exception as e:
+            message = f"Unable to delete application {app_name}, Error: {e}"
+            logger.exception(message)
+            raise Exception(message)
+        else:
+            # Commit will only happen when everything went well.
+            message = "App deletion processed Successfully"
+            logger.debug(message)
+            return result
