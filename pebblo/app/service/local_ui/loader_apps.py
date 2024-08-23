@@ -387,7 +387,7 @@ class LoaderApp:
             dataSources=data_source_obj_list,
             pebbloServerVersion=get_pebblo_server_version(),
             pebbloClientVersion=app_data.get("pluginVersion", ""),
-            clientVersion=app_data.get("clientVersion", {}),
+            clientVersion=app_data.get("clientVersion", None),
         )
         return report_dict.dict()
 
