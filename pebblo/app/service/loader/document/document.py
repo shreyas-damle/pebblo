@@ -1,3 +1,4 @@
+from pebblo.app.enums.enums import LoggerConstants
 from pebblo.app.models.db_models import AiDocument
 from pebblo.app.models.sqltables import AiDocumentTable
 from pebblo.app.service.loader.snippet.snippet import AiSnippetHandler
@@ -5,6 +6,7 @@ from pebblo.app.utils.utils import get_current_time, timeit
 from pebblo.log import get_logger
 
 logger = get_logger(__name__)
+document_prefix = LoggerConstants.DOCUMENT.value
 
 
 class AiDocumentHandler:
@@ -16,7 +18,7 @@ class AiDocumentHandler:
 
     @timeit
     def _get_or_create_document(self, doc, data_source):
-        logger.debug("Create or update AIDocument")
+        logger.debug(f"[{document_prefix}] - Create or update AIDocument")
         filter_query = {
             "appName": self.app_name,
             "loadId": self.data.get("load_id"),
@@ -53,7 +55,7 @@ class AiDocumentHandler:
 
     @staticmethod
     def _update_loader_documents(app_loader_details, document):
-        logger.debug("Updating Loader details with document and findings.")
+        logger.debug(f"[{document_prefix}] - Updating Loader details with document and findings.")
 
         # Updating documents value for AiDataLoader
         documents = app_loader_details.get("documents", [])
@@ -81,12 +83,12 @@ class AiDocumentHandler:
                         loader["sourceFiles"].append(document.get("sourcePath"))
                 loader["lastModified"] = get_current_time()
 
-        logger.debug("Loader details with document and findings updated successfully.")
+        logger.debug(f"[{document_prefix}] - Loader details with document and findings updated successfully.")
         return app_loader_details
 
     @staticmethod
     def _update_document(document, snippet):
-        logger.debug("Updating AIDocument with snippet reference.")
+        logger.debug(f"[{document_prefix}] - Updating AIDocument with snippet reference.")
         existing_topics = document.get("topics")
         if not existing_topics:
             existing_topics = {}
@@ -115,12 +117,12 @@ class AiDocumentHandler:
 
         document["topics"] = existing_topics
         document["entities"] = existing_entities
-        logger.debug("AIDocument Updated successfully with snippet reference")
+        logger.debug(f"[{document_prefix}] - AIDocument Updated successfully with snippet reference")
         return document
 
     @timeit
     def create_or_update_document(self, app_loader_details, data_source):
-        logger.debug("Create or update document snippet")
+        logger.debug(f"[{document_prefix}] - Create or update document snippet")
         input_doc_list = self.data.get("docs", [])
         doc_obj = None
         for doc in input_doc_list:

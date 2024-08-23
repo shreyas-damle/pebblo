@@ -1,6 +1,6 @@
 # Discovery API with database implementation.
 
-from pebblo.app.enums.enums import ApplicationTypes
+from pebblo.app.enums.enums import ApplicationTypes, LoggerConstants
 from pebblo.app.libs.responses import PebbloJsonResponse
 from pebblo.app.models.db_models import (
     AiApp,
@@ -20,7 +20,7 @@ from pebblo.app.utils.utils import get_current_time, get_pebblo_server_version, 
 from pebblo.log import get_logger
 
 logger = get_logger(__name__)
-
+discovery = LoggerConstants.DISCOVERY.value
 
 class AppDiscover:
     def __init__(self):
@@ -42,7 +42,7 @@ class AppDiscover:
         """
         Retrieve instance details from input data and return its corresponding model object.
         """
-        logger.debug("Retrieving instance details from input data.")
+        logger.debug(f"[{discovery}] - Retrieving instance details from input data.")
         # Fetching runtime instance details
         runtime_dict = self.data.get("runtime", {})
         instance_details_model = InstanceDetails(
@@ -58,7 +58,7 @@ class AppDiscover:
             osVersion=runtime_dict.get("os_version"),
             createdAt=get_current_time(),
         )
-        logger.debug(f"AiApp Name [{self.app_name}]")
+        logger.debug(f"[{discovery}] - AiApp Name [{self.app_name}]")
         return instance_details_model
 
     def create_app_obj(
@@ -67,7 +67,7 @@ class AppDiscover:
         """
         Create an AI App Model and return the corresponding model object
         """
-        logger.debug("Creating App model object")
+        logger.debug(f"[{discovery}] - Creating App model object")
         # Initialize Variables
         current_time = get_current_time()
 
@@ -119,7 +119,7 @@ class AppDiscover:
         """
         # TODO: Discussion on the uniqueness of chains is not done yet,
         #  so for now we are appending chain to existing chains in the file for this app.
-        logger.debug("Updating app chains details from input chain details")
+        logger.debug(f"[{discovery}] - Updating app chains details from input chain details")
         chains = list()
 
         if app_metadata:
@@ -155,14 +155,14 @@ class AppDiscover:
             chain_obj = Chain(name=name, model=model, vectorDbs=vector_db_details)
             chains.append(chain_obj.dict())
 
-        logger.debug(f"Application Name [{self.app_name}]")
+        logger.debug(f"[{discovery}] - Application Name [{self.app_name}]")
         return chains
 
     def _fetch_retrievals_details(self, app_metadata) -> list:
         """
         Retrieve existing retrievals details from metadata file and append the new retrieval details
         """
-        logger.debug("Updating app retrievals details with input retrieval details")
+        logger.debug(f"[{discovery}] - Updating app retrievals details with input retrieval details")
         retrievals_details = list()
 
         if app_metadata:
@@ -180,7 +180,7 @@ class AppDiscover:
             self.data = data
             self.app_name = data.get("name")
 
-            logger.debug("Discovery API request started")
+            logger.debug(f"[{discovery}] - Discovery API request started")
 
             # create session
             self.db.create_session()
@@ -226,11 +226,11 @@ class AppDiscover:
                 table_obj=ai_app_obj, data=ai_apps_data
             )
             if not status:
-                logger.error(f"Process request failed: {message}")
+                logger.error(f"[{discovery}] - Process request failed: {message}")
                 return self.return_response(message=message, status_code=500)
 
         except Exception as err:
-            logger.error(f"Discovery api failed, Error: {err}")
+            logger.error(f"[{discovery}] - Discovery api failed, Error: {err}")
             # Getting error, We are rollback everything we did in this run.
             self.db.session.rollback()
             return self.return_response(
@@ -240,11 +240,11 @@ class AppDiscover:
         else:
             # Commit will only happen when everything went well.
             message = "App Discover Request Processed Successfully"
-            logger.debug(message)
+            logger.debug(f"[{discovery}] - {message}")
             self.db.session.commit()
 
             return self.return_response(message=message, status_code=200)
         finally:
-            logger.debug("Closing database session.")
+            logger.debug(f"[{discovery}] - Closing database session.")
             # Closing the session
             self.db.session.close()

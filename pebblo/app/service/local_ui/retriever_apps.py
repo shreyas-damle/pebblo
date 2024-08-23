@@ -9,6 +9,7 @@ from dateutil import parser
 from fastapi import status
 
 from pebblo.app.config.config import var_server_config_dict
+from pebblo.app.enums.enums import LoggerConstants
 from pebblo.app.models.db_response_models import (
     RetrievalAppDetails,
     RetrievalAppList,
@@ -25,7 +26,8 @@ from pebblo.log import get_logger
 config_details = var_server_config_dict.get()
 
 logger = get_logger(__name__)
-
+dashboard_prefix = LoggerConstants.DASHBOARD.value
+retrieval_app_prefix = LoggerConstants.APP_PAGE.value
 
 class RetrieverApp:
     """
@@ -134,7 +136,7 @@ class RetrieverApp:
                             prompt_details[app_name][key]["total_users"] = 1
                 except Exception as ex:
                     logger.warning(
-                        f"[Dashboard]:  Error while iterating prompts for app {app_name} Error: {ex}"
+                        f"[{dashboard_prefix}] - Error while iterating prompts for app {app_name} Error: {ex}"
                     )
 
         prompt_details[app_name] = dict(
@@ -155,7 +157,7 @@ class RetrieverApp:
             return last_accessed_time
         except Exception as ex:
             logger.error(
-                f"[Dashboard]: Error in fetching last accessed time while returning app details response :{ex}"
+                f"[{dashboard_prefix}] -  Error in fetching last accessed time while returning app details response :{ex}"
             )
             return ""
 
@@ -289,7 +291,7 @@ class RetrieverApp:
                 )
             except Exception as ex:
                 logger.warning(
-                    f"[Dashboard]:  Error while iterating retrieval for app {app_name} Error: {ex}"
+                    f"[{dashboard_prefix}] - Error while iterating retrieval for app {app_name} Error: {ex}"
                 )
 
         # fetch active users per app
@@ -426,11 +428,11 @@ class RetrieverApp:
                                 final_prompt_details.append(prompt_dict)
                             except Exception as ex:
                                 logger.warning(
-                                    f"[Dashboard]: Error in iterating key value pair in DB retrieval app list. Error: {ex}"
+                                    f"[{dashboard_prefix}] - Error in iterating key value pair in DB retrieval app list. Error: {ex}"
                                 )
                     except Exception as ex:
                         logger.warning(
-                            f"[Dashboard]: Error in iterating prompt details for all DB retrieval apps: {ex}"
+                            f"[{dashboard_prefix}] - Error in iterating prompt details for all DB retrieval apps: {ex}"
                         )
 
             # Sort retrievals data
@@ -438,7 +440,7 @@ class RetrieverApp:
                 all_retrieval_apps
             )
 
-            logger.debug("[Dashboard]: Preparing retrieval app response object")
+            logger.debug(f"[{dashboard_prefix}] - [Dashboard]: Preparing retrieval app response object")
             retrieval_response = RetrievalAppList(
                 appList=sorted_retrievals_apps,
                 retrievals=self.total_retrievals,
@@ -449,17 +451,17 @@ class RetrieverApp:
             )
 
             response = retrieval_response.dict()
-            logger.debug(f"RetrievalAppResponse: {response}")
+            logger.debug(f"[{dashboard_prefix}] - RetrievalAppResponse: {response}")
         except Exception as ex:
-            logger.error(f"[Dashboard]: Error in all retriever app listing. Error:{ex}")
+            logger.error(f"[{dashboard_prefix}] - Error in all retriever app listing. Error:{ex}")
             # Getting error, Rollback everything we did in this run.
             self.db.session.rollback()
         else:
-            message = "All retriever app response prepared successfully"
+            message = f"[{dashboard_prefix}] - All retriever app response prepared successfully"
             logger.debug(message)
             return response
         finally:
-            logger.debug("Closing database session for preparing all retriever apps")
+            logger.debug(f"[{dashboard_prefix}] - Closing database session for preparing all retriever apps")
             # Closing the session
             self.db.session.close()
 
@@ -503,15 +505,15 @@ class RetrieverApp:
             # prepare retrieval app response
             response = self.prepare_retrieval_app_response(app_data, retrieval_data)
         except Exception as ex:
-            logger.error(f"[Dashboard]: Error in all retriever app listing. Error:{ex}")
+            logger.error(f"[{retrieval_app_prefix}] - Error in all retriever app listing. Error:{ex}")
             # Getting error, Rollback everything we did in this run.
             self.db.session.rollback()
         else:
-            message = "All retriever app response prepared successfully"
+            message = f"[{retrieval_app_prefix}] - All retriever app response prepared successfully"
             logger.debug(message)
             return response
         finally:
-            logger.debug("Closing database session for preparing all retriever apps")
+            logger.debug(f"[{retrieval_app_prefix}] - Closing database session for preparing all retriever apps")
             # Closing the session
             self.db.session.close()
 
@@ -547,7 +549,7 @@ class RetrieverApp:
                                 table_obj=ai_user_obj, data=user_data
                             )
                             if not update_status:
-                                message = f"Exception occurred while deleting {app_name} application"
+                                message = f"[{dashboard_prefix}] - Exception occurred while deleting {app_name} application"
                                 logger.exception(message)
                         else:
                             db.delete(ai_user_obj)
@@ -555,14 +557,14 @@ class RetrieverApp:
             # delete entry from AiApp table
             db.delete(ai_app_obj)
 
-            message = f"Application {app_name} has been deleted."
+            message = f"[{dashboard_prefix}] - Application {app_name} has been deleted."
             logger.info(message)
             result = {"message": message, "status_code": status.HTTP_200_OK}
         except Exception as e:
-            message = f"Unable to delete application {app_name}, Error: {e}"
+            message = f"[{dashboard_prefix}] - Unable to delete application {app_name}, Error: {e}"
             logger.exception(message)
         else:
             # Commit will only happen when everything went well.
-            message = "App deletion processed Successfully"
+            message = f"[{dashboard_prefix}] - App deletion processed Successfully"
             logger.debug(message)
             return result

@@ -2,7 +2,7 @@ import json
 
 from fastapi import status
 
-from pebblo.app.enums.enums import ReportConstants
+from pebblo.app.enums.enums import ReportConstants, LoggerConstants
 from pebblo.app.models.models import (
     DataSource,
     LoaderAppListDetails,
@@ -25,6 +25,8 @@ from pebblo.log import get_logger
 
 logger = get_logger(__name__)
 
+dashboard_prefix = LoggerConstants.DASHBOARD.value
+app_detail_prefix = LoggerConstants.APP_PAGE.value
 
 class LoaderApp:
     def __init__(self):
@@ -80,7 +82,7 @@ class LoaderApp:
                         )
                         break
                 if not findings_exists:
-                    logger.debug("finding not exist")
+                    logger.debug(f"[{dashboard_prefix}] - finding not exist")
                     findings = {
                         "appName": app_data["name"],
                         "labelName": entity,
@@ -219,7 +221,7 @@ class LoaderApp:
             # TODO: Sort loader apps
             # sorted_loader_apps = self._sort_loader_apps(all_loader_apps)
 
-            logger.debug("[Dashboard]: Preparing loader app response object")
+            logger.debug(f"[{dashboard_prefix}] - Preparing loader app response object")
             loader_response = LoaderAppModel(
                 applicationsAtRiskCount=self.loader_apps_at_risk,
                 findingsCount=self.loader_findings,
@@ -232,24 +234,24 @@ class LoaderApp:
             )
 
         except Exception as ex:
-            logger.error(f"[Dashboard]: Error in all loader app listing. Error:{ex}")
+            logger.error(f"[{dashboard_prefix}] - Error in all loader app listing. Error:{ex}")
             # Getting error, Rollback everything we did in this run.
             self.db.session.rollback()
 
         else:
             # Commit will only happen when everything went well.
-            message = "All loader app response prepared successfully"
+            message = f"[{dashboard_prefix}] - All loader app response prepared successfully"
             logger.debug(message)
             self.db.session.commit()
             return loader_response.dict()
         finally:
-            logger.debug("Closing database session for preparing all loader apps")
+            logger.debug(f"[{dashboard_prefix}] - Closing database session for preparing all loader apps")
             # Closing the session
             self.db.session.close()
 
     def get_loader_app_details(self, db, app_name):
         try:
-            logger.debug(f"Getting loader app details, App: {app_name}")
+            logger.debug(f"[{app_detail_prefix}] - Getting loader app details, App: {app_name}")
             self.db = db
             filter_query = {"name": app_name}
             _, ai_loader_apps = self.db.query(
@@ -273,12 +275,12 @@ class LoaderApp:
                 loader_app, loader_response.dict()
             )
         except Exception as ex:
-            message = f"[App Detail]: Error in loader app listing. Error:{ex}"
+            message = f"[{app_detail_prefix}] - Error in loader app listing. Error:{ex}"
             logger.error(message)
             raise Exception(message)
         else:
             # Commit will only happen when everything went well.
-            message = "loader app response prepared successfully"
+            message = f"[{app_detail_prefix}] - loader app response prepared successfully"
             logger.debug(message)
             return json.dumps(report_data, default=str, indent=4)
 
@@ -286,7 +288,7 @@ class LoaderApp:
         """
         Return report summary object
         """
-        logger.debug("Creating report summary")
+        logger.debug(f"[{app_detail_prefix}] - Creating report summary")
         loader_app = raw_data["appList"][0]
         report_summary = Summary(
             findings=raw_data["findingsCount"],
@@ -305,7 +307,7 @@ class LoaderApp:
         """
         Return top N findings from all findings
         """
-        logger.debug("Getting top N findings details and aggregate them")
+        logger.debug(f"[{app_detail_prefix}] - Getting top N findings details and aggregate them")
         documents_with_findings = raw_data["documentsWithFindings"]
         top_n_findings_list = documents_with_findings[
             : ReportConstants.TOP_FINDINGS_LIMIT.value
@@ -332,7 +334,7 @@ class LoaderApp:
         """
         Create data source findings details and data source findings summary
         """
-        logger.debug("Aggregating data source details")
+        logger.debug(f"[{app_detail_prefix}] - Aggregating data source details")
         data_source_obj_list = []
         for loader in app_data["loaders"]:
             name = loader.get("name")
@@ -363,7 +365,7 @@ class LoaderApp:
         """
         Aggregating all input, processing the data, and generating the final report
         """
-        logger.debug("Generating final report")
+        logger.debug(f"[{app_detail_prefix}] - Generating final report")
         # Create report summary
         report_summary = self._create_report_summary(raw_data, app_data)
 
@@ -393,14 +395,14 @@ class LoaderApp:
 
     def _delete(self, db, table_name, filter_query):
         try:
-            logger.info(f"Delete entry from table {table_name}")
+            logger.info(f"[{app_detail_prefix}] - Delete entry from table {table_name}")
             # delete entry from Table
             _, ai_table_data = db.query(table_obj=table_name, filter_query=filter_query)
             if ai_table_data and len(ai_table_data) > 0:
                 db.delete(ai_table_data)
-            logger.debug(f"entry deleted from table {table_name}")
+            logger.debug(f"[{app_detail_prefix}] -  entry deleted from table {table_name}")
         except Exception as err:
-            message = f"Failed in delete entry from table {table_name}, Error: {err}"
+            message = f"[{app_detail_prefix}] - Failed in delete entry from table {table_name}, Error: {err}"
             logger.error(message)
             raise Exception(message)
 
@@ -418,15 +420,15 @@ class LoaderApp:
             # delete entry from AiDataLoader Table
             self._delete(db, AiDataLoaderTable, filter_query={"name": app_name})
 
-            message = f"Application {app_name} has been deleted."
+            message = f"[{app_detail_prefix}] - Application {app_name} has been deleted."
             logger.info(message)
             result = {"message": message, "status_code": status.HTTP_200_OK}
         except Exception as e:
-            message = f"Unable to delete application {app_name}, Error: {e}"
+            message = f"[{app_detail_prefix}] - Unable to delete application {app_name}, Error: {e}"
             logger.exception(message)
             raise Exception(message)
         else:
             # Commit will only happen when everything went well.
-            message = "App deletion processed Successfully"
+            message = f"[{app_detail_prefix}] - App deletion processed Successfully"
             logger.debug(message)
             return result

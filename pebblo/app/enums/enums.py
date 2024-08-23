@@ -54,3 +54,15 @@ class ClassifierConstants(Enum):
 class ApplicationTypes(Enum):
     LOADER = "loader"
     RETRIEVAL = "retrieval"
+
+
+class LoggerConstants(Enum):
+    DISCOVERY = "Discovery"
+    LOADER = "Loader Doc"
+    PROMPT = "Prompt"
+    DASHBOARD = "Dashboard"
+    APP_PAGE = "App Detail"
+    RETRIEVAL = "Retrieval Detail"
+    COMMON = "Common"
+    DOCUMENT = "Document"
+    SNIPPET = "Snippet"

@@ -1,6 +1,7 @@
 # Prompt API with database implementation.
 from datetime import datetime
 
+from pebblo.app.enums.enums import LoggerConstants
 from pebblo.app.libs.responses import PebbloJsonResponse
 from pebblo.app.models.db_models import (
     AiUser as aiuser,
@@ -19,7 +20,7 @@ from pebblo.log import get_logger
 from pebblo.topic_classifier.topic_classifier import TopicClassifier
 
 logger = get_logger(__name__)
-
+prompt_prefix = LoggerConstants.PROMPT.value
 
 class Prompt:
     def __init__(self):
@@ -47,7 +48,7 @@ class Prompt:
         """
         Retrieve input data and return its corresponding model object with classification.
         """
-        logger.debug(f"Retrieving details for: {input_type}")
+        logger.debug(f"[{prompt_prefix}] - Retrieving details for: {input_type}")
 
         (entities, entity_count) = (
             self.entity_classifier_obj.presidio_entity_classifier_and_anonymizer(
@@ -91,7 +92,7 @@ class Prompt:
             user=self.data.get("user"),
             linkedGroups=self.data.get("user_identities"),
         )
-        logger.debug(f"AiApp Name: [{self.app_name}]")
+        logger.debug(f"[{prompt_prefix}] - AiApp Name: [{self.app_name}]")
         return retrieval_data_model
 
     @timeit
@@ -106,13 +107,13 @@ class Prompt:
                 table_obj=AiAppTable, filter_query={"name": self.app_name}
             )
             if not app_exists and ai_app_obj:
-                message = f"{self.app_name} app doesn't exists"
+                message = f"[{prompt_prefix}] - {self.app_name} app doesn't exists"
                 logger.error(message)
                 return self._return_response(message=message, status_code=500)
             if ai_app_obj and len(ai_app_obj) > 0:
                 ai_app_data = ai_app_obj[0]
             else:
-                message = f"{self.app_name} app doesn't exists"
+                message = f"[{prompt_prefix}] - {self.app_name} app doesn't exists"
                 logger.error(message)
                 return self._return_response(message=message, status_code=500)
 
@@ -148,7 +149,7 @@ class Prompt:
                         table_obj=ai_user, data=ai_user.data
                     )
                     if not status:
-                        logger.error(f"Failed during updating AiUser: {message}")
+                        logger.error(f"[{prompt_prefix}] - Failed during updating AiUser: {message}")
                         return self._return_response(message=message, status_code=500)
                 else:
                     # Initialize Variables
@@ -167,7 +168,7 @@ class Prompt:
                         AiUser, ai_user_obj.dict()
                     )
                     if insert_status:
-                        logger.debug(f"Entry: {entry} in AiUser completed")
+                        logger.debug(f"[{prompt_prefix}] - Entry: {entry} in AiUser completed")
                     retrieval_data["user"] = entry.data["name"]
                     user_id = entry.data["id"]
 
@@ -176,8 +177,8 @@ class Prompt:
             insert_status, entry = self.db.insert_data(AiRetrievalTable, retrieval_data)
 
             if not insert_status:
-                message = "Saving retrieval entry failed"
-                logger.error("message")
+                message = f"[{prompt_prefix}] - Saving retrieval entry failed"
+                logger.error(message)
                 return self._return_response(message=message, status_code=500)
 
             # Update AiApp with retrieval ID and user ID
@@ -193,10 +194,10 @@ class Prompt:
                 table_obj=ai_app_data, data=ai_app_data.data
             )
             if not status:
-                logger.error(f"Process request failed: {message}")
+                logger.error(f"[{prompt_prefix}] - Process request failed: {message}")
                 return self._return_response(message=message, status_code=500)
         except Exception as err:
-            logger.error(f"Prompt API failed, Error: {err}")
+            logger.error(f"[{prompt_prefix}] - Prompt API failed, Error: {err}")
             # Getting error, Rollback everything we did in this run.
             self.db.session.rollback()
             return self._return_response(
@@ -204,12 +205,12 @@ class Prompt:
             )
         else:
             # Commit will only happen when everything went well.
-            message = "Prompt Request Processed Successfully"
+            message = f"[{prompt_prefix}] - Prompt Request Processed Successfully"
             logger.debug(message)
             self.db.session.commit()
             return self._return_response(message=message, status_code=200)
         finally:
-            logger.debug("Closing database session for Prompt API.")
+            logger.debug(f"[{prompt_prefix}] - Closing database session for Prompt API.")
             # Closing the session
             self.db.session.close()
 
@@ -219,7 +220,7 @@ class Prompt:
             self.data = data
             self.app_name = self.data.get("name")
 
-            logger.debug("Prompt API request processing started")
+            logger.debug(f"[{prompt_prefix}] - Prompt API request processing started")
 
             # getting prompt data
             prompt_data = self._fetch_classified_data(
@@ -254,7 +255,7 @@ class Prompt:
             response = self._add_retrieval_data(retrieval_data.dict())
             return response
         except Exception as err:
-            logger.error(f"Prompt API failed, Error: {err}")
+            logger.error(f"[{prompt_prefix}] - Prompt API failed, Error: {err}")
             return self._return_response(
-                message=f"Prompt API failed, Error: {err}", status_code=500
+                message=f"[{prompt_prefix}] - Prompt API failed, Error: {err}", status_code=500
             )

@@ -1,15 +1,16 @@
+import hashlib
 import json
 from datetime import datetime
 from os import makedirs, path
 
-from pebblo.app.enums.enums import ApplicationTypes, CacheDir, ClassifierConstants
+from pebblo.app.enums.enums import ApplicationTypes, CacheDir, ClassifierConstants, LoggerConstants
 from pebblo.app.libs.responses import PebbloJsonResponse
 from pebblo.app.models.db_models import (
     AiDataModel,
     AiDataSource,
     LoaderMetadata,
 )
-from pebblo.app.models.db_response_models import LoaderDocResponseModel
+from pebblo.app.models.db_response_models import LoaderDocResponseModel, LoaderDocs
 from pebblo.app.models.sqltables import (
     AiDataLoaderTable,
     AiDataSourceTable,
@@ -26,6 +27,7 @@ from pebblo.topic_classifier.topic_classifier import TopicClassifier
 
 logger = get_logger(__name__)
 
+loader_doc_prefix = LoggerConstants.LOADER.value
 # Init topic classifier
 topic_classifier_obj = TopicClassifier()
 
@@ -38,8 +40,8 @@ class AppLoaderDoc:
         self.entity_classifier_obj = EntityClassifier()
 
     @staticmethod
-    def _create_return_response(message, status_code=200):
-        response = LoaderDocResponseModel(docs=[], message=message)
+    def _create_return_response(message, output=[], status_code=200):
+        response = LoaderDocResponseModel(docs=output, message=message)
         return PebbloJsonResponse.build(
             body=response.dict(exclude_none=True), status_code=status_code
         )
@@ -64,12 +66,12 @@ class AppLoaderDoc:
             )
             if status:
                 logger.info(
-                    f"PDF report generated, please check path : {full_file_path}"
+                    f"[{loader_doc_prefix}] - PDF report generated, please check path : {full_file_path}"
                 )
             else:
                 raise Exception(result)
         except Exception as err:
-            message = f"PDF report is not generated. Error: {err}"
+            message = f"[{loader_doc_prefix}] - PDF report is not generated. Error: {err}"
             logger.error(message)
             raise Exception(message)
 
@@ -90,8 +92,8 @@ class AppLoaderDoc:
         Calling PDF report generator to write a report in PDF format
         """
         try:
-            logger.debug("Generating report in pdf format")
-            logger.debug(f"Fetching report data for app: {app_name}")
+            logger.debug(f"[{loader_doc_prefix}] - Generating report in pdf format")
+            logger.debug(f"[{loader_doc_prefix}] - Fetching report data for app: {app_name}")
             loader_report = LoaderApp()
             report_data = loader_report.get_loader_app_details(db, app_name)
             final_report = json.loads(report_data, object_hook=self._datetime_decoder)
@@ -112,7 +114,7 @@ class AppLoaderDoc:
         Update loader details in the application if they already exist;
         otherwise, add loader details to the application.
         """
-        logger.debug("Upsert loader details to exiting ai app details")
+        logger.debug(f"[{loader_doc_prefix}] - Upsert loader details to exiting ai app details")
 
         # Update loader details if it already exits in app
         loader_details = self.data.get("loader_details", {})
@@ -142,8 +144,7 @@ class AppLoaderDoc:
 
             # If loader does not exist, create new entry
             if not loader_exist:
-                logger.debug(
-                    "Loader details does not exist in app details, adding details to app details"
+                logger.debug(f"[{loader_doc_prefix}] - Loader details does not exist in app details, adding details to app details"
                 )
                 new_loader_data = LoaderMetadata(
                     name=loader_name,
@@ -157,12 +158,12 @@ class AppLoaderDoc:
                 app_loader_details["loaders"] = loader_list
 
         # self.db.update_data(table_obj, app_loader_details)
-        logger.debug("Loader details Updated successfully.")
+        logger.debug(f"[{loader_doc_prefix}] - Loader details Updated successfully.")
         return app_loader_details
 
     @timeit
     def _get_doc_classification(self, doc):
-        logger.debug("Doc classification started.")
+        logger.debug(f"[{loader_doc_prefix}] - Doc classification started.")
         doc_info = AiDataModel(
             data=doc.get("doc", None),
             entities={},
@@ -189,11 +190,11 @@ class AppLoaderDoc:
                 doc_info.topicCount = topic_count
                 doc_info.entityCount = entity_count
                 doc_info.data = anonymized_doc
-            logger.debug("Doc classification finished.")
+            logger.debug(f"[{loader_doc_prefix}] - Doc classification finished.")
             return doc_info
         except Exception as e:
             logger.error(
-                f"Get Classifier Response Failed for doc: {doc}, Exception: {e}"
+                f"[{loader_doc_prefix}] - Get Classifier Response Failed for doc: {doc}, Exception: {e}"
             )
             return doc_info
 
@@ -203,25 +204,25 @@ class AppLoaderDoc:
         """
         Create a doc model and return its object
         """
-        logger.debug("Update doc details with classification result")
+        logger.debug(f"[{loader_doc_prefix}] - Update doc details with classification result")
         doc["entities"] = doc_info.entities
         doc["topics"] = doc_info.topics
-        logger.debug("Input doc updated with classification result")
+        logger.debug(f"[{loader_doc_prefix}] - Input doc updated with classification result")
 
     @timeit
     def _doc_pre_processing(self):
-        logger.debug("Input docs pre processing started.")
+        logger.debug(f"[{loader_doc_prefix}] - Input docs pre processing started.")
         input_doc_list = self.data.get("docs", [])
         for doc in input_doc_list:
             doc_info = self._get_doc_classification(doc)
             self._update_doc_details(doc, doc_info)
 
         # Update input doc with updated one
-        logger.debug("Doc pre processing finished.")
+        logger.debug(f"[{loader_doc_prefix}] - Doc pre processing finished.")
 
     @timeit
     def _get_or_create_data_source(self):
-        logger.debug("Getting or Creating Data Source Details.")
+        logger.debug(f"[{loader_doc_prefix}] - Getting or Creating Data Source Details.")
         loader_details = self.data.get("loader_details") or {}
 
         filter_query = {
@@ -232,7 +233,7 @@ class AppLoaderDoc:
         }
         status, output = self.db.query(AiDataSourceTable, filter_query)
         if status and output:
-            logger.debug("Data Source details are already existed.")
+            logger.debug(f"[{loader_doc_prefix}] - Data Source details are already existed.")
             data = output.data
             return data
 
@@ -251,7 +252,7 @@ class AppLoaderDoc:
         ai_data_source_obj = AiDataSource(**data_source)
         ai_data_source = ai_data_source_obj.dict()
         _, data_source_obj = self.db.insert_data(AiDataSourceTable, ai_data_source)
-        logger.debug("Data Source has been created successfully.")
+        logger.debug(f"[{loader_doc_prefix}] - Data Source has been created successfully.")
         return data_source_obj.data
 
     @timeit
@@ -290,22 +291,38 @@ class AppLoaderDoc:
             )
             self.db.update_data(loader_obj, app_loader_details)
 
+             # Creating loader response
+            loader_details = self.data.get("loader_details", {})
+            docs = self.data.get("docs", [])
+            loader_response_output = []
+            for doc in docs:
+                doc_obj = LoaderDocs(
+                    pb_id=doc["pb_id"],
+                    pb_checksum=hashlib.md5(doc["doc"].encode()).hexdigest(),
+                    source_path=doc["source_path_size"],
+                    loader_source_path=loader_details.get("source_path"),
+                    entity_count=sum(doc.get('entities', {}).values()),
+                    topic_count=sum(doc.get('topics', {}).values()),
+                    entities=doc.get("entities"),
+                    topics=doc.get("topics")
+                )
+                loader_response_output.append(doc_obj)
+
+            # Writing a PDF report
             if self.data["loading_end"]:
                 # Get report data & Write PDF report
                 self._write_pdf_report(
                     self.db, app_loader_details["name"], app_loader_details["id"]
                 )
-
         except Exception as err:
-            message = f"Loader Doc API Request failed, Error: {err}"
+            message = f"[{loader_doc_prefix}] - Loader Doc API Request failed, Error: {err}"
             logger.error(message)
-            logger.info("Rollback the changes")
+            logger.info(f"[{loader_doc_prefix}] - Rollback the changes")
             self.db.session.rollback()
             return self._create_return_response(message, 500)
         else:
             self.db.session.commit()
-
             message = "Loader Doc API Request processed successfully"
-            return self._create_return_response(message)
+            return self._create_return_response(message, output=loader_response_output)
         finally:
             self.db.session.close()

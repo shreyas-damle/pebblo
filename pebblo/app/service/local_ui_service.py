@@ -11,7 +11,7 @@ from fastapi import status
 
 from pebblo.app.config.config import var_server_config_dict
 from pebblo.app.enums.common import StorageTypes
-from pebblo.app.enums.enums import ApplicationTypes, CacheDir
+from pebblo.app.enums.enums import ApplicationTypes, CacheDir, LoggerConstants
 from pebblo.app.models.models import (
     LoaderAppListDetails,
     LoaderAppModel,
@@ -37,7 +37,8 @@ from pebblo.log import get_logger
 config_details = var_server_config_dict.get()
 
 logger = get_logger(__name__)
-
+dashboard_prefix = LoggerConstants.DASHBOARD.value
+app_detail_prefix = LoggerConstants.APP_PAGE.value
 
 class AppData:
     """
@@ -63,9 +64,9 @@ class AppData:
         load_ids = app_json.get("load_ids", [])
 
         if not load_ids:
-            logger.debug(f"[Dashboard]: No valid loadIds found for app: {app_dir}.")
+            logger.debug(f"[{dashboard_prefix}] No valid loadIds found for app: {app_dir}.")
             logger.warning(
-                f"[Dashboard]: No valid loadIs found for the application: {app_name}, skipping application."
+                f"[{dashboard_prefix}] No valid loadIs found for the application: {app_name}, skipping application."
             )
             return
 
@@ -74,10 +75,10 @@ class AppData:
 
         if not latest_load_id:
             logger.debug(
-                f"[Dashboard]: No valid latest loadIds found for app: {app_dir}, skipping application."
+                f"[{dashboard_prefix}] No valid latest loadIds found for app: {app_dir}, skipping application."
             )
             logger.warning(
-                f"[Dashboard]: No metadata file is present for any load ids for application: {app_name},"
+                f"[{dashboard_prefix}] No metadata file is present for any load ids for application: {app_name},"
                 f"skipping Application."
             )
             return
@@ -100,7 +101,7 @@ class AppData:
         # Skip app if data source details are not present for some reason.
         if not data_source_details:
             logger.warning(
-                f"[Dashboard]: No Data Source details are present for the application: {app_name},"
+                f"[{dashboard_prefix}] No Data Source details are present for the application: {app_name},"
                 f"skipping application."
             )
             return
@@ -203,7 +204,7 @@ class AppData:
                             prompt_details[app_name][key]["total_users"] = 1
                 except Exception as ex:
                     logger.warning(
-                        f"[Dashboard]:  Error while iterating prompts for app {app_name} Error: {ex}"
+                        f"[{dashboard_prefix}]  Error while iterating prompts for app {app_name} Error: {ex}"
                     )
 
         prompt_details[app_name] = dict(
@@ -218,7 +219,7 @@ class AppData:
     def prepare_retrieval_response(
         self, app_dir, app_json, prompt_details, total_prompt_with_findings
     ):
-        logger.debug("[Dashboard]: In prepare retrieval response")
+        logger.debug(f"[{dashboard_prefix}] In prepare retrieval response")
         app_name = app_json["name"]
 
         app_metadata_path = (
@@ -230,11 +231,11 @@ class AppData:
         # Skip app if app_metadata details are not present for some reason.
         if not app_metadata_content:
             logger.debug(
-                f"[Dashboard]: Error: Unable to fetch app_metadata.json content for {app_dir} app"
+                f"[{dashboard_prefix}] Error: Unable to fetch app_metadata.json content for {app_dir} app"
             )
-            logger.debug(f"[Dashboard]: App metadata Json : {app_metadata_content}")
+            logger.debug(f"[{dashboard_prefix}] App metadata Json : {app_metadata_content}")
             logger.warning(
-                f"[Dashboard]: Application metadata file is not present for application: {app_name}, skipping application"
+                f"[{dashboard_prefix}] Application metadata file is not present for application: {app_name}, skipping application"
             )
             return
 
@@ -251,7 +252,7 @@ class AppData:
                 )
             except Exception as ex:
                 logger.warning(
-                    f"[Dashboard]:  Error while iterating retrieval for app {app_name} Error: {ex}"
+                    f"[{dashboard_prefix}]  Error while iterating retrieval for app {app_name} Error: {ex}"
                 )
 
         # fetch active users per app
@@ -303,7 +304,7 @@ class AppData:
                         # Skip hidden folders
                         if app_dir.startswith("."):
                             logger.debug(
-                                f"[Dashboard]: Skipping hidden folder {app_dir}"
+                                f"[{dashboard_prefix}] Skipping hidden folder {app_dir}"
                             )
                             continue
                         # Path to metadata.json
@@ -312,17 +313,17 @@ class AppData:
                             f"{CacheDir.METADATA_FILE_PATH.value}"
                         )
 
-                        logger.debug(f"[Dashboard]: Metadata file path {app_path}")
+                        logger.debug(f"[{dashboard_prefix}] Metadata file path {app_path}")
                         app_json = read_json_file(app_path)
 
                         if not app_json:
                             # Unable to find json file
                             logger.debug(
-                                f"[Dashboard]: Metadata file {CacheDir.METADATA_FILE_PATH.value} "
+                                f"[{dashboard_prefix}] Metadata file {CacheDir.METADATA_FILE_PATH.value} "
                                 f"not found for app: {app_dir}."
                             )
                             logger.warning(
-                                f"[Dashboard]: Metadata file is not present for application: {app_dir},"
+                                f"[{dashboard_prefix}] Metadata file is not present for application: {app_dir},"
                                 f"skipping application"
                             )
                             continue
@@ -348,7 +349,7 @@ class AppData:
 
                     except Exception as err:
                         logger.warning(
-                            f"[Dashboard]: Error processing app {app_dir}: {err}"
+                            f"[{dashboard_prefix}] Error processing app {app_dir}: {err}"
                         )
                 final_prompt_details = []
                 for key, value in prompt_details.items():
@@ -367,17 +368,17 @@ class AppData:
                                 final_prompt_details.append(prompt_dict)
                             except Exception as ex:
                                 logger.warning(
-                                    f"[Dashboard]: Error in iterating key value pair in retrieval app list. Error: {ex}"
+                                    f"[{dashboard_prefix}] Error in iterating key value pair in retrieval app list. Error: {ex}"
                                 )
                     except Exception as ex:
                         logger.warning(
-                            f"[Dashboard]: Error in iterating prompt details for all retrieval apps: {ex}"
+                            f"[{dashboard_prefix}] Error in iterating prompt details for all retrieval apps: {ex}"
                         )
 
                 # Sort loader apps
                 sorted_loader_apps = self._sort_loader_apps(all_loader_apps)
 
-                logger.debug("[Dashboard]: Preparing loader app response object")
+                logger.debug(f"[{dashboard_prefix}] Preparing loader app response object")
                 loader_response = LoaderAppModel(
                     applicationsAtRiskCount=self.loader_apps_at_risk,
                     findingsCount=self.loader_findings,
@@ -394,7 +395,7 @@ class AppData:
                     all_retrieval_apps
                 )
 
-                logger.debug("[Dashboard]: Preparing retrieval app response object")
+                logger.debug(f"[{dashboard_prefix}] Preparing retrieval app response object")
                 retrieval_response = RetrievalAppList(
                     appList=sorted_retrievals_apps,
                     retrievals=self.total_retrievals,
@@ -412,7 +413,7 @@ class AppData:
                 )
                 return json.dumps(response, indent=4)
             except Exception as ex:
-                logger.error(f"[Dashboard]: Error in app listing. Error:{ex}")
+                logger.error(f"[{dashboard_prefix}] Error in app listing. Error:{ex}")
                 return json.dumps({})
         elif storage_type == StorageTypes.DATABASE.value:
             try:
@@ -426,7 +427,7 @@ class AppData:
                 )
                 return json.dumps(response, indent=4)
             except Exception as ex:
-                logger.error(f"[Dashboard]: Error in app listing. Error:{ex}")
+                logger.error(f"[{dashboard_prefix}] Error in app listing. Error:{ex}")
                 return json.dumps({})
 
     def get_loader_app_details(self, app_dir, load_ids):
@@ -434,9 +435,9 @@ class AppData:
         latest_load_id, app_detail_json = self.get_latest_load_id(load_ids, app_dir)
 
         if not latest_load_id:
-            logger.debug(f"[App Details]: No valid loadIds found for app {app_dir}.")
+            logger.debug(f"[{app_detail_prefix}]: No valid loadIds found for app {app_dir}.")
             logger.warning(
-                f"[App Details]: No valid latest loadIs found for app: {app_dir}, skipping application."
+                f"[{app_detail_prefix}]: No valid latest loadIs found for app: {app_dir}, skipping application."
             )
             return json.dumps({})
 
@@ -456,18 +457,18 @@ class AppData:
             try:
                 # Path to metadata.json
                 app_path = f"{CacheDir.HOME_DIR.value}/{app_dir}/{CacheDir.METADATA_FILE_PATH.value}"
-                logger.debug(f"[App Details]: Metadata file path: {app_path}")
+                logger.debug(f"[{app_detail_prefix}]: Metadata file path: {app_path}")
                 # Reading metadata.json
                 app_json = read_json_file(app_path)
                 # Condition for handling loadId
                 if not app_json:
                     # Unable to fetch loadId details
                     logger.debug(
-                        f"[App Details]: Error: Report Json {CacheDir.METADATA_FILE_PATH.value}"
+                        f"[{app_detail_prefix}]: Error: Report Json {CacheDir.METADATA_FILE_PATH.value}"
                         f"not found for app {app_path}"
                     )
                     logger.warning(
-                        f"[App Details]: Metadata file is not present for application: {app_dir}, skipping application"
+                        f"[{app_detail_prefix}]: Metadata file is not present for application: {app_dir}, skipping application"
                     )
                     return json.dumps({})
                 app_type = app_json.get("app_type", None)
@@ -477,10 +478,10 @@ class AppData:
                     if not load_ids:
                         # Unable to fetch loadId details
                         logger.debug(
-                            f"[App Details]: Error: Details not found for app {app_path}"
+                            f"[{app_detail_prefix}]: Error: Details not found for app {app_path}"
                         )
                         logger.warning(
-                            f"[App Details]: No valid loadIs found for the application: {app_name}, skipping application."
+                            f"[{app_detail_prefix}]: No valid loadIs found for the application: {app_name}, skipping application."
                         )
                         return json.dumps({})
                     response = self.get_loader_app_details(app_dir, load_ids)
@@ -494,10 +495,10 @@ class AppData:
                     # Skip app if app_metadata details are not present for some reason.
                     if not app_metadata_content:
                         logger.debug(
-                            f"[App Details]: Error: Unable to fetch app_metadata.json content for {app_dir} app"
+                            f"[{app_detail_prefix}]: Error: Unable to fetch app_metadata.json content for {app_dir} app"
                         )
                         logger.warning(
-                            f"[App Details]: Application metadata file is not present for application: {app_name},"
+                            f"[{app_detail_prefix}]: Application metadata file is not present for application: {app_name},"
                             f"skipping application."
                         )
                         return json.dumps({})
@@ -505,7 +506,7 @@ class AppData:
                     return response
             except Exception as ex:
                 logger.error(
-                    f"[App Details]: Error in getting app details. Error: {ex}"
+                    f"[{app_detail_prefix}]: Error in getting app details. Error: {ex}"
                 )
         elif storage_type == StorageTypes.DATABASE.value:
             try:
@@ -526,10 +527,10 @@ class AppData:
                 return response
             except Exception as ex:
                 logger.error(
-                    f"[App Details]: Error in getting app details. Error: {ex}"
+                    f"[{app_detail_prefix}]: Error in getting app details. Error: {ex}"
                 )
             finally:
-                logger.debug("[App Details] get app details finished.")
+                logger.debug(f"[{app_detail_prefix}] get app details finished.")
                 self.db.session.close()
 
     def delete_application(self, app_name):
@@ -599,7 +600,7 @@ class AppData:
         for load_id in reversed(load_ids):
             # Path to report.json
             app_detail_path = f"{CacheDir.HOME_DIR.value}/{app_dir}/{load_id}/{CacheDir.REPORT_DATA_FILE_NAME.value}"
-            logger.debug(f"[App Details]: Report File path: {app_detail_path}")
+            logger.debug(f"[{app_detail_prefix}]: Report File path: {app_detail_path}")
             app_detail_json = read_json_file(app_detail_path)
             if app_detail_json:
                 # If a report is found, proceed with this load_id
@@ -670,7 +671,7 @@ class AppData:
             return last_accessed_time
         except Exception as ex:
             logger.error(
-                f"[Dashboard]: Error in fetching last accessed time while returning app details response :{ex}"
+                f"[{dashboard_prefix}] Error in fetching last accessed time while returning app details response :{ex}"
             )
             return ""
 
