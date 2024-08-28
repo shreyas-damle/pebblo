@@ -191,7 +191,7 @@ class LoaderApp:
             owner=app_data.get("owner"),
             loadId=app_data.get("id"),
         )
-        return app_details.dict()
+        return app_details.model_dump()
 
     def get_all_loader_apps(self):
         """
@@ -245,7 +245,7 @@ class LoaderApp:
             message = "All loader app response prepared successfully"
             logger.debug(message)
             self.db.session.commit()
-            return loader_response.dict()
+            return loader_response.model_dump()
         finally:
             logger.debug("Closing database session for preparing all loader apps")
             # Closing the session
@@ -274,7 +274,7 @@ class LoaderApp:
             )
 
             report_data = self._generate_final_report(
-                loader_app, loader_response.dict()
+                loader_app, loader_response.model_dump()
             )
         except Exception as ex:
             message = f"[App Detail]: Error in loader app listing. Error:{ex}"
@@ -393,7 +393,7 @@ class LoaderApp:
             pebbloClientVersion=app_data.get("pluginVersion", ""),
             clientVersion=app_data.get("clientVersion", {}),
         )
-        return report_dict.dict()
+        return report_dict.model_dump()
 
     def _delete(self, db, table_name, filter_query):
         try:
