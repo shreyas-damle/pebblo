@@ -11,7 +11,6 @@ from pebblo.app.enums.enums import CacheDir
 from pebblo.app.libs.responses import PebbloJsonResponse
 from pebblo.app.models.models import LoaderDocResponseModel, LoaderDocs, LoaderMetadata
 from pebblo.app.service.doc_helper import LoaderHelper
-from pebblo.log import get_logger
 from pebblo.app.utils.utils import (
     acquire_lock,
     get_full_path,
@@ -19,6 +18,7 @@ from pebblo.app.utils.utils import (
     release_lock,
     write_json_to_file,
 )
+from pebblo.log import get_logger
 from pebblo.reports.reports import Reports
 
 logger = get_logger(__name__)

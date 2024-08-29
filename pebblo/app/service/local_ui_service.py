@@ -4,8 +4,8 @@ This module handles business logic for local UI
 
 import json
 import os
-from typing import Any, Dict, List, Tuple
 import uuid
+from typing import Any, Dict, List, Tuple
 
 from dateutil import parser
 from fastapi import status
@@ -362,21 +362,6 @@ class AppData:
                         )
                         continue
 
-                    app_type = app_json.get("app_type", None)
-                    logger.debug(f"App Data: {app_json}")
-                    if app_type in ["loader", None]:
-                        loader_app = self.prepare_loader_response(app_dir, app_json)
-
-                        if loader_app:
-                            all_loader_apps.append(loader_app)
-                    elif app_type == "retrieval":
-                        retrieval_app = self.prepare_retrieval_response(
-                            app_dir, app_json
-                        )
-
-                        if retrieval_app:
-                            all_retrieval_apps.append(retrieval_app)
-
                 # Sort loader apps
                 sorted_loader_apps = self._sort_loader_apps(all_loader_apps)
 
@@ -418,7 +403,8 @@ class AppData:
                                 continue
                     except Exception as ex:
                         logger.warning(
-                            f"[Dashboard]: Error in iterating prompt details for all retrieval apps: {ex}")
+                            f"[Dashboard]: Error in iterating prompt details for all retrieval apps: {ex}"
+                        )
                         continue
 
                 logger.debug("[Dashboard]: Preparing retrieval app response object")
@@ -503,7 +489,9 @@ class AppData:
                     run_ids = app_json.get("run_ids", None)
                     if not load_ids and not run_ids:
                         # Unable to fetch loadId/runIds details
-                        logger.debug(f"No valid loadIds/runIds found for app {app_dir}.")
+                        logger.debug(
+                            f"No valid loadIds/runIds found for app {app_dir}."
+                        )
                         logger.warning(
                             f"Skipping app '{app_dir}' due to missing or invalid file"
                         )
@@ -618,6 +606,7 @@ class AppData:
                 logger.debug("Closing database session for delete application")
                 # Closing the session
                 self.db.session.close()
+
     def get_latest_load_id(self, app_json: dict, app_dir: str):
         """
         Returns app latestLoadId for an app.
