@@ -1,5 +1,4 @@
 import json
-from collections.abc import MutableMapping
 
 from fastapi import status
 
@@ -20,7 +19,8 @@ from pebblo.app.models.sqltables import (
 from pebblo.app.storage.sqlite_db import SQLiteClient
 from pebblo.app.utils.utils import (
     get_current_time,
-    get_pebblo_server_version, merge_dicts,
+    get_pebblo_server_version,
+    merge_dicts,
 )
 from pebblo.log import get_logger
 
@@ -140,12 +140,10 @@ class LoaderApp:
         if "runId" in app_data.keys():
             filter_query["runId"] = app_data.get("runId")
         else:
-            filter_query["loadId"]= app_data.get("id")
+            filter_query["loadId"] = app_data.get("id")
 
         # Data Source Details
-        status, data_sources = self.db.query(
-            AiDataSourceTable, filter_query
-        )
+        status, data_sources = self.db.query(AiDataSourceTable, filter_query)
         for data_source in data_sources:
             ds_data = data_source.data
             ds_obj = {
@@ -167,9 +165,7 @@ class LoaderApp:
 
         # Fetch required data for DocumentWithFindings
 
-        status, documents = self.db.query(
-            AiDocumentTable, filter_query
-        )
+        status, documents = self.db.query(AiDocumentTable, filter_query)
         loader_document_with_findings = app_data.get("documentsWithFindings")
         documents_with_findings_data = []
         for document in documents:
@@ -201,13 +197,15 @@ class LoaderApp:
         )
         return app_details.dict()
 
-    def _get_consolidate_app_data(self,app_name, run_id):
+    def _get_consolidate_app_data(self, app_name, run_id):
         filter_query = {"name": app_name, "runId": run_id}
-        _, ai_loader_apps = self.db.query(table_obj=AiDataLoaderTable, filter_query=filter_query)
+        _, ai_loader_apps = self.db.query(
+            table_obj=AiDataLoaderTable, filter_query=filter_query
+        )
         final_loader_apps = {}
         for loader_app in ai_loader_apps:
             data = loader_app.data
-            final_loader_apps= merge_dicts(final_loader_apps, data)
+            final_loader_apps = merge_dicts(final_loader_apps, data)
         return final_loader_apps
 
     def get_all_loader_apps(self):
@@ -232,7 +230,9 @@ class LoaderApp:
                     continue
 
                 if "runId" in app_data.keys():
-                    app_data = self._get_consolidate_app_data(app_data["name"], app_data["runId"])
+                    app_data = self._get_consolidate_app_data(
+                        app_data["name"], app_data["runId"]
+                    )
 
                 if app_data.get("docEntities") or app_data.get("docTopics"):
                     self.loader_apps_at_risk += 1
@@ -283,7 +283,9 @@ class LoaderApp:
             for loader_app in ai_loader_apps:
                 data = loader_app.data
                 if "runId" in data.keys():
-                    final_loader_apps = self._get_consolidate_app_data(app_name, data["runId"])
+                    final_loader_apps = self._get_consolidate_app_data(
+                        app_name, data["runId"]
+                    )
                 else:
                     final_loader_apps = ai_loader_apps[0].data
                 break

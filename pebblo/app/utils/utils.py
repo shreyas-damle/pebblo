@@ -314,8 +314,8 @@ def merge_dicts(dict1, dict2):
                 d1[k] = deep_merge(d1.get(k, {}), v)
             elif isinstance(v, list) and k in d1:
                 d1[k].extend(x for x in v if x not in d1[k])
-                if k=="snippetIds":
-                    d1["count"] = len(d1[k]) # Increasing the snippet counts
+                if k == "snippetIds":
+                    d1["count"] = len(d1[k])  # Increasing the snippet counts
             else:
                 d1[k] = d1.get(k, v)
         return d1

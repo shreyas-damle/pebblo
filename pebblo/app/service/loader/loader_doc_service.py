@@ -306,7 +306,9 @@ class AppLoaderDoc:
             loader_response_output = []
             for doc in docs:
                 doc_obj = LoaderDocs(
-                    pb_id=doc.get("pb_id", "0"), # check what exactly we are receiving in input doc, either "id" or "pb_id"
+                    pb_id=doc.get(
+                        "pb_id", "0"
+                    ),  # TODO: check what exactly we are receiving in input doc, either "id" or "pb_id"
                     pb_checksum=hashlib.md5(doc.get("doc", "").encode()).hexdigest(),
                     source_path=doc.get("source_path"),
                     loader_source_path=loader_details.get("source_path"),
@@ -334,6 +336,8 @@ class AppLoaderDoc:
             return self._create_return_response(message=message, status_code=500)
         else:
             message = "Loader Doc API Request processed successfully"
-            return self._create_return_response(message=message, output=loader_response_output)
+            return self._create_return_response(
+                message=message, output=loader_response_output
+            )
         finally:
             self.db.session.close()
