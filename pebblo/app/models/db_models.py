@@ -33,6 +33,7 @@ class FrameworkInfo(BaseModel):
 
 class AiBaseApp(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
+    runId: Optional[str] = None
     name: str
     owner: str
     description: Optional[str] = None
@@ -147,6 +148,7 @@ class AiDataLoader(AiBaseApp):
 class AiDataSource(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     appName: str
+    runId: Optional[str] = None
     loadId: str
     metadata: Metadata
     sourcePath: str
@@ -156,6 +158,7 @@ class AiDataSource(BaseModel):
 
 class AiDocument(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
+    runId: Optional[str] = None
     appName: str
     loadId: str
     dataSourceId: str
@@ -172,6 +175,7 @@ class AiDocument(BaseModel):
 class AiSnippet(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     appName: str
+    runId: Optional[str] = None
     loadId: str
     dataSourceId: str
     documentId: str
